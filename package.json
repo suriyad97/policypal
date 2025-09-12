@@ -6,10 +6,12 @@
   "scripts": {
     "dev": "vite",
     "dev:full": "concurrently \"npm run server\" \"npm run dev\"",
+    "dev:python": "concurrently \"npm run python-server\" \"npm run dev\"",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "server": "node server/chat.js"
+    "server": "node server/chat.js",
+    "python-server": "cd python-server && python run.py"
   },
   "dependencies": {
     "cors": "^2.8.5",

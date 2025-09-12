@@ -1,6 +1,6 @@
 # PolicyPal - Insurance Management System
 
-A comprehensive insurance management system built with React, TypeScript, and Azure SQL Database.
+A comprehensive insurance management system built with React, TypeScript, Python FastAPI, and Azure SQL Database.
 
 ## Features
 
@@ -9,6 +9,8 @@ A comprehensive insurance management system built with React, TypeScript, and Az
 - **Azure SQL Database**: Robust data storage with 35+ insurance products
 - **Dynamic Forms**: Context-aware forms based on insurance type
 - **Real-time Chat**: Conversation history and customer data management
+- **Python Backend**: FastAPI server with async database operations
+- **Dual Backend Support**: Both Node.js and Python backend options
 
 ## Environment Setup
 
@@ -16,11 +18,11 @@ Create a `.env` file with the following variables:
 
 ```env
 # LLM Configuration
-VITE_LLM_ENDPOINT=your_llm_endpoint
-VITE_LLM_SUBSCRIPTION_KEY=your_subscription_key
-VITE_LLM_DEPLOYMENT_NAME=your_deployment_name
-VITE_LLM_MODEL_NAME=your_model_name
-VITE_LLM_API_VERSION=your_api_version
+LLM_ENDPOINT=your_llm_endpoint
+LLM_SUBSCRIPTION_KEY=your_subscription_key
+LLM_DEPLOYMENT_NAME=your_deployment_name
+LLM_MODEL_NAME=your_model_name
+LLM_API_VERSION=your_api_version
 
 # Azure SQL Database
 AZURE_SQL_SERVER=tcp:ml-lms-db.database.windows.net
@@ -28,6 +30,19 @@ AZURE_SQL_DATABASE=lms-db
 AZURE_SQL_USERNAME=lmsadmin-001
 AZURE_SQL_PASSWORD=Creative@2025
 ```
+
+## Python Backend Setup
+
+1. **Install Python dependencies:**
+   ```bash
+   cd python-server
+   pip install -r requirements.txt
+   ```
+
+2. **Install ODBC Driver for SQL Server:**
+   - **Windows**: Download from Microsoft
+   - **macOS**: `brew install msodbcsql18 mssql-tools18`
+   - **Linux**: Follow Microsoft's installation guide
 
 ## Database Setup
 
@@ -37,11 +52,27 @@ AZURE_SQL_PASSWORD=Creative@2025
 
 ## Installation
 
+**Option 1: Node.js Backend**
 ```bash
 npm install
 npm run dev:full
 ```
 
+**Option 2: Python Backend**
+```bash
+npm install
+cd python-server && pip install -r requirements.txt
+cd ..
+npm run dev:python
+```
+
+## API Documentation
+
+When using the Python backend, visit `http://localhost:5000/docs` for interactive API documentation.
+
 ## Deployment
 
-This app is designed for deployment on Azure Static Web Apps with environment variables configured in the Azure portal.
+This app supports deployment on:
+- **Frontend**: Azure Static Web Apps, Vercel, Netlify
+- **Python Backend**: Azure App Service, AWS Lambda, Google Cloud Run
+- **Database**: Azure SQL Database
