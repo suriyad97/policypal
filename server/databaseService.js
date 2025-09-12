@@ -2,10 +2,10 @@ import sql from 'mssql';
 
 // Azure SQL Database configuration
 const dbConfig = {
-  server: import.meta.env.VITE_AZURE_SQL_SERVER,
-  database: import.meta.env.VITE_AZURE_SQL_DATABASE,
-  user: import.meta.env.VITE_AZURE_SQL_USERNAME,
-  password: import.meta.env.VITE_AZURE_SQL_PASSWORD,
+  server: process.env.AZURE_SQL_SERVER,
+  database: process.env.AZURE_SQL_DATABASE,
+  user: process.env.AZURE_SQL_USERNAME,
+  password: process.env.AZURE_SQL_PASSWORD,
   options: {
     encrypt: true, // Use encryption
     trustServerCertificate: false // For Azure SQL
@@ -17,76 +17,10 @@ const dbConfig = {
   }
 };
 
-// Database types matching the Azure SQL schema
-export interface InsuranceProduct {
-  product_id: number;
-  product_name: string;
-  product_type: 'savings' | 'auto' | 'home' | 'health' | 'term_life';
-  target_gender: 'male' | 'female' | 'non_binary' | 'all';
-  min_age: number;
-  max_age: number;
-  premium_amount: number;
-  coverage_details: string;
-  provider_name: string;
-  features: string; // JSON string
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Customer {
-  customer_id?: number;
-  // Basic Information
-  name: string;
-  email: string;
-  phone: string;
-  zip_code: string;
-  insurance_type: 'savings' | 'auto' | 'home' | 'health' | 'term_life';
-  
-  // Demographics (for health, term_life, savings)
-  age?: number;
-  gender?: 'male' | 'female' | 'non_binary';
-  
-  // Auto Insurance Specific
-  vehicle_number?: string;
-  vehicle_model?: string;
-  vehicle_year?: number;
-  
-  // Health Insurance Specific
-  medical_history?: string;
-  
-  // Term Life Insurance Specific
-  coverage_amount?: string;
-  relationship?: 'self' | 'spouse' | 'parents' | 'child';
-  
-  // Savings Plan Specific
-  monthly_investment?: string;
-  investment_goal?: string;
-  
-  // Optional
-  current_provider?: string;
-  status?: 'active' | 'quoted' | 'converted' | 'inactive';
-  lead_source?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface CustomerConversation {
-  conversation_id?: number;
-  customer_id: number;
-  session_id: string;
-  messages: string; // JSON string
-  conversation_status?: 'active' | 'completed' | 'abandoned';
-  started_at?: string;
-  ended_at?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
 // Database connection pool
-let pool: sql.ConnectionPool | null = null;
+let pool = null;
 
-async function getConnection(): Promise<sql.ConnectionPool> {
+async function getConnection() {
   if (!pool) {
     pool = new sql.ConnectionPool(dbConfig);
     await pool.connect();
@@ -100,11 +34,7 @@ export class DatabaseService {
   /**
    * Get insurance products filtered by type, age, and gender
    */
-  static async getInsuranceProducts(
-    productType: string,
-    age?: number,
-    gender?: string
-  ): Promise<InsuranceProduct[]> {
+  static async getInsuranceProducts(productType, age, gender) {
     try {
       const connection = await getConnection();
       const request = connection.request();
@@ -141,7 +71,7 @@ export class DatabaseService {
   /**
    * Store customer data with validation
    */
-  static async storeCustomer(customerData: any): Promise<number | null> {
+  static async storeCustomer(customerData) {
     try {
       // Validate required fields based on insurance type
       this.validateCustomerData(customerData);
@@ -150,7 +80,7 @@ export class DatabaseService {
       const request = connection.request();
 
       // Format data according to database schema
-      const formattedData: Partial<Customer> = {
+      const formattedData = {
         name: customerData.name?.trim(),
         email: customerData.email?.toLowerCase().trim(),
         phone: customerData.phone?.trim(),
@@ -195,7 +125,7 @@ export class DatabaseService {
       }
 
       // Build INSERT query
-      const columns = Object.keys(formattedData).filter(key => formattedData[key as keyof Customer] !== undefined);
+      const columns = Object.keys(formattedData).filter(key => formattedData[key] !== undefined);
       const values = columns.map(col => `@${col}`).join(', ');
       const columnNames = columns.join(', ');
 
@@ -207,7 +137,7 @@ export class DatabaseService {
 
       // Add parameters
       columns.forEach(col => {
-        const value = formattedData[col as keyof Customer];
+        const value = formattedData[col];
         if (typeof value === 'number') {
           request.input(col, sql.Int, value);
         } else {
@@ -226,7 +156,7 @@ export class DatabaseService {
   /**
    * Validate customer data based on insurance type
    */
-  private static validateCustomerData(customerData: any): void {
+  static validateCustomerData(customerData) {
     // Basic validation
     if (!customerData.name?.trim()) {
       throw new Error('Name is required');
@@ -307,10 +237,7 @@ export class DatabaseService {
   /**
    * Create conversation history record
    */
-  static async createConversationHistory(
-    customerId: number,
-    sessionId: string
-  ): Promise<number | null> {
+  static async createConversationHistory(customerId, sessionId) {
     try {
       const connection = await getConnection();
       const request = connection.request();
@@ -337,10 +264,7 @@ export class DatabaseService {
   /**
    * Update conversation history with new messages
    */
-  static async updateConversationHistory(
-    conversationId: number,
-    messages: Array<{ role: string; content: string; timestamp: string }>
-  ): Promise<boolean> {
+  static async updateConversationHistory(conversationId, messages) {
     try {
       const connection = await getConnection();
       const request = connection.request();
@@ -365,7 +289,7 @@ export class DatabaseService {
   /**
    * End conversation
    */
-  static async endConversation(conversationId: number): Promise<boolean> {
+  static async endConversation(conversationId) {
     try {
       const connection = await getConnection();
       const request = connection.request();
@@ -390,7 +314,7 @@ export class DatabaseService {
   /**
    * Get customer by ID
    */
-  static async getCustomer(customerId: number): Promise<Customer | null> {
+  static async getCustomer(customerId) {
     try {
       const connection = await getConnection();
       const request = connection.request();
@@ -409,10 +333,7 @@ export class DatabaseService {
   /**
    * Update customer status
    */
-  static async updateCustomerStatus(
-    customerId: number, 
-    status: 'active' | 'quoted' | 'converted' | 'inactive'
-  ): Promise<boolean> {
+  static async updateCustomerStatus(customerId, status) {
     try {
       const connection = await getConnection();
       const request = connection.request();

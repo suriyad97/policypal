@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
+import { DatabaseService } from './databaseService.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -8,6 +9,81 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Database API endpoints
+
+// Get insurance products
+app.post('/api/database/products', async (req, res) => {
+  try {
+    const { productType, age, gender } = req.body;
+    const products = await DatabaseService.getInsuranceProducts(productType, age, gender);
+    res.json({ success: true, data: products });
+  } catch (error) {
+    console.error('Products API error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch products' });
+  }
+});
+
+// Store customer data
+app.post('/api/database/customer', async (req, res) => {
+  try {
+    const { customerData } = req.body;
+    const customerId = await DatabaseService.storeCustomer(customerData);
+    res.json({ success: true, data: { customerId } });
+  } catch (error) {
+    console.error('Customer API error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get customer data
+app.get('/api/database/customer/:id', async (req, res) => {
+  try {
+    const customerId = parseInt(req.params.id);
+    const customer = await DatabaseService.getCustomer(customerId);
+    res.json({ success: true, data: customer });
+  } catch (error) {
+    console.error('Get customer API error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch customer' });
+  }
+});
+
+// Create conversation history
+app.post('/api/database/conversation', async (req, res) => {
+  try {
+    const { customerId, sessionId } = req.body;
+    const conversationId = await DatabaseService.createConversationHistory(customerId, sessionId);
+    res.json({ success: true, data: { conversationId } });
+  } catch (error) {
+    console.error('Conversation API error:', error);
+    res.status(500).json({ success: false, error: 'Failed to create conversation' });
+  }
+});
+
+// Update conversation history
+app.put('/api/database/conversation/:id', async (req, res) => {
+  try {
+    const conversationId = parseInt(req.params.id);
+    const { messages } = req.body;
+    const success = await DatabaseService.updateConversationHistory(conversationId, messages);
+    res.json({ success });
+  } catch (error) {
+    console.error('Update conversation API error:', error);
+    res.status(500).json({ success: false, error: 'Failed to update conversation' });
+  }
+});
+
+// End conversation
+app.put('/api/database/conversation/:id/end', async (req, res) => {
+  try {
+    const conversationId = parseInt(req.params.id);
+    const success = await DatabaseService.endConversation(conversationId);
+    res.json({ success });
+  } catch (error) {
+    console.error('End conversation API error:', error);
+    res.status(500).json({ success: false, error: 'Failed to end conversation' });
+  }
+});
 
 // Store conversation sessions
 const sessions = new Map();

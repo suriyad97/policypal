@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Bot, User, Sparkles, Shield, Phone, Mail, MapPin, Calendar, CheckCircle, Star, Award, Users } from 'lucide-react';
 import { FormData } from './SinglePageForm';
-import { DatabaseService, InsuranceProduct } from '../lib/azureDatabase';
 
 interface Message {
   id: string;
@@ -18,6 +17,22 @@ interface Message {
   };
 }
 
+interface InsuranceProduct {
+  product_id: number;
+  product_name: string;
+  product_type: 'savings' | 'auto' | 'home' | 'health' | 'term_life';
+  target_gender: 'male' | 'female' | 'non_binary' | 'all';
+  min_age: number;
+  max_age: number;
+  premium_amount: number;
+  coverage_details: string;
+  provider_name: string;
+  features: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 interface ChatInterfaceProps {
   formData: FormData;
   onBack: () => void;
@@ -30,6 +45,96 @@ const LLM_CONFIG = {
   deploymentName: import.meta.env.VITE_LLM_DEPLOYMENT_NAME, // For Azure OpenAI
   modelName: import.meta.env.VITE_LLM_MODEL_NAME,
   apiVersion: import.meta.env.VITE_LLM_API_VERSION
+};
+
+// Backend API base URL
+const API_BASE_URL = 'http://localhost:5000/api';
+
+// Database API functions
+const DatabaseAPI = {
+  async getInsuranceProducts(productType: string, age?: number, gender?: string): Promise<InsuranceProduct[]> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/database/products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productType, age, gender })
+      });
+      const result = await response.json();
+      return result.success ? result.data : [];
+    } catch (error) {
+      console.error('API Error:', error);
+      return [];
+    }
+  },
+
+  async storeCustomer(customerData: any): Promise<number | null> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/database/customer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerData })
+      });
+      const result = await response.json();
+      return result.success ? result.data.customerId : null;
+    } catch (error) {
+      console.error('API Error:', error);
+      return null;
+    }
+  },
+
+  async getCustomer(customerId: number): Promise<any | null> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/database/customer/${customerId}`);
+      const result = await response.json();
+      return result.success ? result.data : null;
+    } catch (error) {
+      console.error('API Error:', error);
+      return null;
+    }
+  },
+
+  async createConversationHistory(customerId: number, sessionId: string): Promise<number | null> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/database/conversation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerId, sessionId })
+      });
+      const result = await response.json();
+      return result.success ? result.data.conversationId : null;
+    } catch (error) {
+      console.error('API Error:', error);
+      return null;
+    }
+  },
+
+  async updateConversationHistory(conversationId: number, messages: Array<{ role: string; content: string; timestamp: string }>): Promise<boolean> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/database/conversation/${conversationId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages })
+      });
+      const result = await response.json();
+      return result.success;
+    } catch (error) {
+      console.error('API Error:', error);
+      return false;
+    }
+  },
+
+  async endConversation(conversationId: number): Promise<boolean> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/database/conversation/${conversationId}/end`, {
+        method: 'PUT'
+      });
+      const result = await response.json();
+      return result.success;
+    } catch (error) {
+      console.error('API Error:', error);
+      return false;
+    }
+  }
 };
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }) => {
@@ -140,20 +245,20 @@ Start the conversation by greeting them personally and acknowledging their speci
       
       try {
         // 1. Store customer data in database first
-        const storedCustomerId = await DatabaseService.storeCustomer(formData);
+        const storedCustomerId = await DatabaseAPI.storeCustomer(formData);
         if (!storedCustomerId) {
           throw new Error('Failed to store customer data');
         }
         setCustomerId(storedCustomerId.toString());
         
         // 2. Get stored customer data for context
-        const customer = await DatabaseService.getCustomer(storedCustomerId);
+        const customer = await DatabaseAPI.getCustomer(storedCustomerId);
         if (!customer) {
           throw new Error('Failed to retrieve customer data');
         }
         
         // 3. Fetch relevant insurance products from database
-        const products = await DatabaseService.getInsuranceProducts(
+        const products = await DatabaseAPI.getInsuranceProducts(
           formData.insuranceType,
           customer.age,
           customer.gender
@@ -162,7 +267,7 @@ Start the conversation by greeting them personally and acknowledging their speci
         
         // 4. Create conversation history record
         const sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
-        const conversationHistoryId = await DatabaseService.createConversationHistory(
+        const conversationHistoryId = await DatabaseAPI.createConversationHistory(
           storedCustomerId,
           sessionId
         );
@@ -190,7 +295,7 @@ Start the conversation by greeting them personally and acknowledging their speci
         
         // 7. Store initial conversation in database
         if (conversationHistoryId) {
-          await DatabaseService.updateConversationHistory(conversationHistoryId, [
+          await DatabaseAPI.updateConversationHistory(conversationHistoryId, [
             { role: 'assistant', content: response, timestamp: new Date().toISOString() }
           ]);
         }
@@ -231,7 +336,7 @@ Start the conversation by greeting them personally and acknowledging their speci
 
     try {
       // Get customer data for context
-      const customer = customerId ? await DatabaseService.getCustomer(parseInt(customerId)) : null;
+      const customer = customerId ? await DatabaseAPI.getCustomer(parseInt(customerId)) : null;
       if (!customer) {
         throw new Error('Customer data not found');
       }
@@ -267,7 +372,7 @@ Start the conversation by greeting them personally and acknowledging their speci
         timestamp: msg.timestamp.toISOString()
       }));
       
-      await DatabaseService.updateConversationHistory(conversationId, allMessages);
+      await DatabaseAPI.updateConversationHistory(conversationId, allMessages);
     }
     } catch (error) {
       console.error('Error in handleSendMessage:', error);
@@ -286,7 +391,7 @@ Start the conversation by greeting them personally and acknowledging their speci
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (conversationId) {
-        DatabaseService.endConversation(conversationId);
+        DatabaseAPI.endConversation(conversationId);
       }
     };
 
@@ -294,7 +399,7 @@ Start the conversation by greeting them personally and acknowledging their speci
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       if (conversationId) {
-        DatabaseService.endConversation(conversationId);
+        DatabaseAPI.endConversation(conversationId);
       }
     };
   }, [conversationId]);
