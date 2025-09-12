@@ -2,10 +2,10 @@ import sql from 'mssql';
 
 // Azure SQL Database configuration
 const dbConfig = {
-  server: process.env.AZURE_SQL_SERVER,
-  database: process.env.AZURE_SQL_DATABASE,
-  user: process.env.AZURE_SQL_USERNAME,
-  password: process.env.AZURE_SQL_PASSWORD,
+  server: process.env.AZURE_SQL_SERVER || 'db.database.windows.net',
+  database: process.env.AZURE_SQL_DATABASE || 'PolicyPalDB',
+  user: process.env.AZURE_SQL_USERNAME || 'admin001',
+  password: process.env.AZURE_SQL_PASSWORD || 'admin231',
   options: {
     encrypt: true, // Use encryption
     trustServerCertificate: false // For Azure SQL
