@@ -1,6 +1,23 @@
-import { supabase } from './supabase';
+import sql from 'mssql';
 
-// Database types matching the new schema
+// Azure SQL Database configuration
+const dbConfig = {
+  server: import.meta.env.VITE_AZURE_SQL_SERVER,
+  database: import.meta.env.VITE_AZURE_SQL_DATABASE,
+  user: import.meta.env.VITE_AZURE_SQL_USERNAME,
+  password: import.meta.env.VITE_AZURE_SQL_PASSWORD,
+  options: {
+    encrypt: true, // Use encryption
+    trustServerCertificate: false // For Azure SQL
+  },
+  pool: {
+    max: 10,
+    min: 0,
+    idleTimeoutMillis: 30000
+  }
+};
+
+// Database types matching the Azure SQL schema
 export interface InsuranceProduct {
   product_id: number;
   product_name: string;
@@ -11,7 +28,7 @@ export interface InsuranceProduct {
   premium_amount: number;
   coverage_details: string;
   provider_name: string;
-  features: Record<string, any>;
+  features: string; // JSON string
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -58,16 +75,23 @@ export interface CustomerConversation {
   conversation_id?: number;
   customer_id: number;
   session_id: string;
-  messages: Array<{
-    role: 'user' | 'assistant' | 'system';
-    content: string;
-    timestamp: string;
-  }>;
+  messages: string; // JSON string
   conversation_status?: 'active' | 'completed' | 'abandoned';
   started_at?: string;
   ended_at?: string;
   created_at?: string;
   updated_at?: string;
+}
+
+// Database connection pool
+let pool: sql.ConnectionPool | null = null;
+
+async function getConnection(): Promise<sql.ConnectionPool> {
+  if (!pool) {
+    pool = new sql.ConnectionPool(dbConfig);
+    await pool.connect();
+  }
+  return pool;
 }
 
 // Database service functions
@@ -82,30 +106,32 @@ export class DatabaseService {
     gender?: string
   ): Promise<InsuranceProduct[]> {
     try {
-      let query = supabase
-        .from('insurance_products')
-        .select('*')
-        .eq('product_type', productType)
-        .eq('is_active', true);
+      const connection = await getConnection();
+      const request = connection.request();
+      
+      let query = `
+        SELECT * FROM insurance_products 
+        WHERE product_type = @productType AND is_active = 1
+      `;
+      
+      request.input('productType', sql.NVarChar, productType);
 
       // Filter by age if provided
       if (age) {
-        query = query.lte('min_age', age).gte('max_age', age);
+        query += ` AND min_age <= @age AND max_age >= @age`;
+        request.input('age', sql.Int, age);
       }
 
       // Filter by gender if provided
       if (gender) {
-        query = query.or(`target_gender.eq.${gender},target_gender.eq.all`);
+        query += ` AND (target_gender = @gender OR target_gender = 'all')`;
+        request.input('gender', sql.NVarChar, gender);
       }
 
-      const { data, error } = await query.order('premium_amount', { ascending: true });
+      query += ` ORDER BY premium_amount ASC`;
 
-      if (error) {
-        console.error('Error fetching insurance products:', error);
-        throw new Error(`Failed to fetch insurance products: ${error.message}`);
-      }
-
-      return data || [];
+      const result = await request.query(query);
+      return result.recordset || [];
     } catch (error) {
       console.error('Database error:', error);
       return [];
@@ -119,6 +145,9 @@ export class DatabaseService {
     try {
       // Validate required fields based on insurance type
       this.validateCustomerData(customerData);
+
+      const connection = await getConnection();
+      const request = connection.request();
 
       // Format data according to database schema
       const formattedData: Partial<Customer> = {
@@ -165,18 +194,29 @@ export class DatabaseService {
           break;
       }
 
-      const { data, error } = await supabase
-        .from('customers')
-        .insert([formattedData])
-        .select('customer_id')
-        .single();
+      // Build INSERT query
+      const columns = Object.keys(formattedData).filter(key => formattedData[key as keyof Customer] !== undefined);
+      const values = columns.map(col => `@${col}`).join(', ');
+      const columnNames = columns.join(', ');
 
-      if (error) {
-        console.error('Error storing customer data:', error);
-        throw new Error(`Failed to store customer data: ${error.message}`);
-      }
+      const query = `
+        INSERT INTO customers (${columnNames})
+        OUTPUT INSERTED.customer_id
+        VALUES (${values})
+      `;
 
-      return data?.customer_id || null;
+      // Add parameters
+      columns.forEach(col => {
+        const value = formattedData[col as keyof Customer];
+        if (typeof value === 'number') {
+          request.input(col, sql.Int, value);
+        } else {
+          request.input(col, sql.NVarChar, value);
+        }
+      });
+
+      const result = await request.query(query);
+      return result.recordset[0]?.customer_id || null;
     } catch (error) {
       console.error('Database error:', error);
       throw error;
@@ -210,10 +250,9 @@ export class DatabaseService {
       throw new Error('Invalid email format');
     }
 
-    // Phone format validation
-    const phoneRegex = /^[0-9+\-\s()]{10,15}$/;
-    if (!phoneRegex.test(customerData.phone)) {
-      throw new Error('Invalid phone format');
+    // Phone format validation (basic)
+    if (customerData.phone.length < 10) {
+      throw new Error('Phone number must be at least 10 digits');
     }
 
     // Type-specific validation
@@ -273,23 +312,22 @@ export class DatabaseService {
     sessionId: string
   ): Promise<number | null> {
     try {
-      const { data, error } = await supabase
-        .from('customer_conversations')
-        .insert([{
-          customer_id: customerId,
-          session_id: sessionId,
-          messages: [],
-          conversation_status: 'active'
-        }])
-        .select('conversation_id')
-        .single();
+      const connection = await getConnection();
+      const request = connection.request();
 
-      if (error) {
-        console.error('Error creating conversation history:', error);
-        throw new Error(`Failed to create conversation history: ${error.message}`);
-      }
+      const query = `
+        INSERT INTO customer_conversations (customer_id, session_id, messages, conversation_status)
+        OUTPUT INSERTED.conversation_id
+        VALUES (@customerId, @sessionId, @messages, @status)
+      `;
 
-      return data?.conversation_id || null;
+      request.input('customerId', sql.Int, customerId);
+      request.input('sessionId', sql.NVarChar, sessionId);
+      request.input('messages', sql.NVarChar, '[]');
+      request.input('status', sql.NVarChar, 'active');
+
+      const result = await request.query(query);
+      return result.recordset[0]?.conversation_id || null;
     } catch (error) {
       console.error('Database error:', error);
       return null;
@@ -304,19 +342,19 @@ export class DatabaseService {
     messages: Array<{ role: string; content: string; timestamp: string }>
   ): Promise<boolean> {
     try {
-      const { error } = await supabase
-        .from('customer_conversations')
-        .update({
-          messages: messages,
-          updated_at: new Date().toISOString()
-        })
-        .eq('conversation_id', conversationId);
+      const connection = await getConnection();
+      const request = connection.request();
 
-      if (error) {
-        console.error('Error updating conversation history:', error);
-        return false;
-      }
+      const query = `
+        UPDATE customer_conversations 
+        SET messages = @messages
+        WHERE conversation_id = @conversationId
+      `;
 
+      request.input('conversationId', sql.Int, conversationId);
+      request.input('messages', sql.NVarChar, JSON.stringify(messages));
+
+      await request.query(query);
       return true;
     } catch (error) {
       console.error('Database error:', error);
@@ -329,20 +367,19 @@ export class DatabaseService {
    */
   static async endConversation(conversationId: number): Promise<boolean> {
     try {
-      const { error } = await supabase
-        .from('customer_conversations')
-        .update({
-          conversation_status: 'completed',
-          ended_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('conversation_id', conversationId);
+      const connection = await getConnection();
+      const request = connection.request();
 
-      if (error) {
-        console.error('Error ending conversation:', error);
-        return false;
-      }
+      const query = `
+        UPDATE customer_conversations 
+        SET conversation_status = @status, ended_at = GETDATE()
+        WHERE conversation_id = @conversationId
+      `;
 
+      request.input('conversationId', sql.Int, conversationId);
+      request.input('status', sql.NVarChar, 'completed');
+
+      await request.query(query);
       return true;
     } catch (error) {
       console.error('Database error:', error);
@@ -355,18 +392,14 @@ export class DatabaseService {
    */
   static async getCustomer(customerId: number): Promise<Customer | null> {
     try {
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('customer_id', customerId)
-        .single();
+      const connection = await getConnection();
+      const request = connection.request();
 
-      if (error) {
-        console.error('Error fetching customer:', error);
-        return null;
-      }
+      const query = `SELECT * FROM customers WHERE customer_id = @customerId`;
+      request.input('customerId', sql.Int, customerId);
 
-      return data;
+      const result = await request.query(query);
+      return result.recordset[0] || null;
     } catch (error) {
       console.error('Database error:', error);
       return null;
@@ -381,19 +414,19 @@ export class DatabaseService {
     status: 'active' | 'quoted' | 'converted' | 'inactive'
   ): Promise<boolean> {
     try {
-      const { error } = await supabase
-        .from('customers')
-        .update({ 
-          status: status,
-          updated_at: new Date().toISOString()
-        })
-        .eq('customer_id', customerId);
+      const connection = await getConnection();
+      const request = connection.request();
 
-      if (error) {
-        console.error('Error updating customer status:', error);
-        return false;
-      }
+      const query = `
+        UPDATE customers 
+        SET status = @status
+        WHERE customer_id = @customerId
+      `;
 
+      request.input('customerId', sql.Int, customerId);
+      request.input('status', sql.NVarChar, status);
+
+      await request.query(query);
       return true;
     } catch (error) {
       console.error('Database error:', error);
@@ -401,3 +434,11 @@ export class DatabaseService {
     }
   }
 }
+
+// Cleanup connection on app termination
+process.on('SIGINT', async () => {
+  if (pool) {
+    await pool.close();
+  }
+  process.exit(0);
+});
