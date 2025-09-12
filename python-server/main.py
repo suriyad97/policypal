@@ -9,20 +9,60 @@ from datetime import datetime
 import logging
 import asyncio
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Load environment from .env if present
+load_dotenv()
+
 # Database configuration
+def _detect_odbc_driver() -> str:
+    # Prefer env override if provided
+    driver_env = os.getenv('AZURE_SQL_DRIVER') or os.getenv('ODBC_DRIVER')
+    if driver_env:
+        # Ensure it's wrapped in {}
+        d = driver_env.strip()
+        return d if d.startswith('{') else '{' + d + '}'
+
+    preferred = [
+        'ODBC Driver 18 for SQL Server',
+        'ODBC Driver 17 for SQL Server',
+    ]
+    try:
+        drivers = set(pyodbc.drivers())
+        for name in preferred:
+            if name in drivers:
+                return '{' + name + '}'
+    except Exception:
+        # Fall back to 18 if detection fails
+        pass
+    return '{ODBC Driver 18 for SQL Server}'
+
+def _normalize_server(server: str) -> str:
+    if not server:
+        return server
+    s = server.strip()
+    # Accept values like tcp:host or host; add default port for Azure if missing
+    if s.lower().startswith('tcp:'):
+        s_val = s
+    else:
+        s_val = s
+    # Append default port for Azure if not specified
+    if 'database.windows.net' in s_val and ',' not in s_val:
+        s_val = f"{s_val},1433"
+    return s_val
+
 DB_CONFIG = {
-    'server': os.getenv('AZURE_SQL_SERVER', 'tcp:ml-lms-db.database.windows.net'),
+    'server': _normalize_server(os.getenv('AZURE_SQL_SERVER', 'tcp:ml-lms-db.database.windows.net')),
     'database': os.getenv('AZURE_SQL_DATABASE', 'lms-db'),
     'username': os.getenv('AZURE_SQL_USERNAME', 'lmsadmin-001'),
     'password': os.getenv('AZURE_SQL_PASSWORD', 'Creative@2025'),
-    'driver': '{ODBC Driver 18 for SQL Server}',
-    'encrypt': 'yes',
-    'trust_server_certificate': 'no'
+    'driver': _detect_odbc_driver(),
+    'encrypt': os.getenv('AZURE_SQL_ENCRYPT', 'yes'),
+    'trust_server_certificate': os.getenv('AZURE_SQL_TRUST_SERVER_CERTIFICATE', 'no')
 }
 
 # Pydantic models
@@ -102,7 +142,8 @@ class DatabaseService:
         try:
             return pyodbc.connect(self.connection_string)
         except Exception as e:
-            logger.error(f"Database connection failed: {e}")
+            safe_conn_str = self.connection_string.replace(DB_CONFIG['password'], '***') if DB_CONFIG.get('password') else self.connection_string
+            logger.error(f"Database connection failed: {e}\nConnection string used (sanitized): {safe_conn_str}")
             raise HTTPException(status_code=500, detail="Database connection failed")
 
     def store_customer(self, customer_data: CustomerData):
@@ -255,6 +296,44 @@ async def health_check():
         return {"status": "healthy", "database": "connected", "timestamp": datetime.now().isoformat()}
     except Exception as e:
         return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
+
+@app.get("/api/debug/odbc")
+async def debug_odbc():
+    try:
+        drivers = pyodbc.drivers()
+    except Exception:
+        drivers = []
+    return {
+        "drivers": drivers,
+        "driver_selected": DB_CONFIG.get('driver'),
+        "server": DB_CONFIG.get('server'),
+        "database": DB_CONFIG.get('database'),
+        "encrypt": DB_CONFIG.get('encrypt'),
+        "trust_server_certificate": DB_CONFIG.get('trust_server_certificate'),
+        "uid_present": bool(DB_CONFIG.get('username')),
+        "pwd_present": bool(DB_CONFIG.get('password')),
+    }
+
+@app.get("/api/debug/db-connection")
+async def debug_db_connection():
+    # Attempt a raw connection to capture the underlying ODBC error
+    try:
+        conn = pyodbc.connect(db_service.connection_string)
+        conn.close()
+        return {"success": True, "message": "Connected successfully"}
+    except Exception as e:
+        safe_conn_str = db_service.connection_string.replace(DB_CONFIG['password'], '***') if DB_CONFIG.get('password') else db_service.connection_string
+        try:
+            drivers = pyodbc.drivers()
+        except Exception:
+            drivers = []
+        return {
+            "success": False,
+            "error": str(e),
+            "connection_string_sanitized": safe_conn_str,
+            "available_drivers": drivers,
+            "selected_driver": DB_CONFIG.get('driver'),
+        }
 
 @app.post("/api/database/customer")
 async def store_customer(request: CustomerRequest):
