@@ -22,11 +22,11 @@ interface ChatInterfaceProps {
   onBack: () => void;
 }
 
-// LLM Configuration - Replace with your actual values
+// LLM Configuration from environment variables
 const LLM_CONFIG = {
-  endpoint: 'YOUR_LLM_ENDPOINT_HERE', // Replace with your endpoint
-  subscriptionKey: 'YOUR_SUBSCRIPTION_KEY_HERE', // Replace with your key
-  deploymentName: 'YOUR_DEPLOYMENT_NAME_HERE' // Replace with your deployment name (if using Azure OpenAI)
+  endpoint: import.meta.env.VITE_LLM_ENDPOINT,
+  subscriptionKey: import.meta.env.VITE_LLM_SUBSCRIPTION_KEY,
+  deploymentName: import.meta.env.VITE_LLM_DEPLOYMENT_NAME // For Azure OpenAI
 };
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }) => {
