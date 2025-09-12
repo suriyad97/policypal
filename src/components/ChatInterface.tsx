@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Bot, User, Sparkles, Shield, Phone, Mail, MapPin, Calendar, CheckCircle, Star, Award, Users } from 'lucide-react';
 import { FormData } from './SinglePageForm';
+import { DatabaseService, InsuranceProduct } from '../lib/supabase';
 
 interface Message {
   id: string;
@@ -36,6 +37,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [showQuotes, setShowQuotes] = useState(false);
+  const [customerId, setCustomerId] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [insuranceProducts, setInsuranceProducts] = useState<InsuranceProduct[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -47,13 +51,17 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }
   }, [messages]);
 
   // Generate system prompt based on form data
-  const generateSystemPrompt = (formData: FormData) => {
+  const generateSystemPrompt = (formData: FormData, products: InsuranceProduct[]) => {
     const insuranceContext = {
       car: `The customer is looking for car insurance for their ${formData.vehicleModel} (${formData.vehicleYear}) with registration number ${formData.vehicleNumber}.`,
       health: `The customer is a ${formData.age} year old ${formData.gender?.toLowerCase()} looking for health insurance. ${formData.medicalHistory ? `Medical history: ${formData.medicalHistory}` : 'No pre-existing conditions mentioned.'}`,
       term: `The customer is a ${formData.lifeAge} year old ${formData.lifeGender?.toLowerCase()} looking for term life insurance with ${formData.coverageAmount} coverage for ${formData.relationship}.`,
       savings: `The customer is a ${formData.savingsAge} year old ${formData.savingsGender?.toLowerCase()} looking for a savings plan with ₹${formData.monthlyInvestment} monthly investment for ${formData.investmentGoal}.`
     };
+
+    const availableProducts = products.map(p => 
+      `${p.provider_name} - ${p.product_name}: ₹${p.base_premium}/month, Coverage: ${p.coverage_amount || 'Standard'}`
+    ).join('\n');
 
     return `You are PolicyPal, a professional and friendly insurance advisor. You are helping ${formData.name} from ${formData.zipCode} with their ${formData.insuranceType} insurance needs.
 
@@ -67,14 +75,19 @@ ${formData.currentProvider ? `- Current Provider: ${formData.currentProvider}` :
 
 Context: ${insuranceContext[formData.insuranceType as keyof typeof insuranceContext] || 'General insurance inquiry.'}
 
+Available Insurance Products:
+${availableProducts}
+
 Instructions:
 1. Be professional, helpful, and knowledgeable about insurance
 2. Ask relevant follow-up questions to better understand their needs
-3. Provide personalized recommendations based on their information
+3. Provide personalized recommendations from the available products above
 4. Explain insurance terms in simple language
 5. Focus on finding the best coverage for their specific situation
 6. Keep responses concise but informative
 7. Show empathy and build trust
+8. When recommending products, use the exact provider names and pricing from the available products
+9. Explain why specific products are suitable for their needs
 
 Start the conversation by greeting them personally and acknowledging their specific insurance needs.`;
   };
@@ -120,27 +133,70 @@ Start the conversation by greeting them personally and acknowledging their speci
   };
 
   useEffect(() => {
-    // Initialize conversation with LLM
+    // Initialize database and conversation
     const initializeChat = async () => {
       setIsTyping(true);
       
-      const systemPrompt = generateSystemPrompt(formData);
-      const initialMessages = [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: 'Hello, I would like to get started with my insurance quote.' }
-      ];
+      try {
+        // 1. Fetch insurance products from database
+        const products = await DatabaseService.getInsuranceProducts(formData.insuranceType);
+        setInsuranceProducts(products);
+        
+        // 2. Store customer data in appropriate table
+        const storedCustomerId = await DatabaseService.storeCustomer(formData, formData.insuranceType);
+        if (storedCustomerId) {
+          setCustomerId(storedCustomerId);
+          
+          // 3. Create conversation history record
+          const sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+          const conversationHistoryId = await DatabaseService.createConversationHistory(
+            storedCustomerId,
+            formData.insuranceType,
+            sessionId
+          );
+          setConversationId(conversationHistoryId);
+        }
+        
+        // 4. Generate system prompt with product data
+        const systemPrompt = generateSystemPrompt(formData, products);
+        
+        // 5. Initialize LLM conversation
+        const initialMessages = [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: 'Hello, I would like to get started with my insurance quote.' }
+        ];
 
-      const response = await callLLMAPI(initialMessages);
-      
-      const initialMessage: Message = {
-        id: '1',
-        type: 'bot',
-        content: response,
-        timestamp: new Date(),
-      };
+        const response = await callLLMAPI(initialMessages);
+        
+        const initialMessage: Message = {
+          id: '1',
+          type: 'bot',
+          content: response,
+          timestamp: new Date(),
+        };
 
+        setMessages([initialMessage]);
+        
+        // 6. Store initial conversation in database
+        if (conversationHistoryId) {
+          await DatabaseService.updateConversationHistory(conversationHistoryId, [
+            { role: 'assistant', content: response, timestamp: new Date().toISOString() }
+          ]);
+        }
+        
+      } catch (error) {
+        console.error('Error initializing chat:', error);
+        
+        // Fallback initialization
+        const fallbackMessage: Message = {
+          id: '1',
+          type: 'bot',
+          content: `Hello ${formData.name}! 👋 I'm PolicyPal, your personal insurance advisor. I'm here to help you find the perfect ${formData.insuranceType} insurance coverage. Let me know what questions you have!`,
+          timestamp: new Date(),
+        };
+        setMessages([fallbackMessage]);
+      }
       setIsTyping(false);
-      setMessages([initialMessage]);
     };
 
     initializeChat();
@@ -163,8 +219,9 @@ Start the conversation by greeting them personally and acknowledging their speci
     setIsTyping(true);
 
     // Build conversation history for LLM
+    const systemPrompt = generateSystemPrompt(formData, insuranceProducts);
     const conversationHistory = [
-      { role: 'system', content: generateSystemPrompt(formData) },
+      { role: 'system', content: systemPrompt },
       ...messages.map(msg => ({
         role: msg.type === 'user' ? 'user' : 'assistant',
         content: msg.content
@@ -183,7 +240,35 @@ Start the conversation by greeting them personally and acknowledging their speci
 
     setIsTyping(false);
     setMessages(prev => [...prev, botMessage]);
+    
+    // Update conversation history in database
+    if (conversationId) {
+      const allMessages = [...messages, userMessage, botMessage].map(msg => ({
+        role: msg.type === 'user' ? 'user' : 'assistant',
+        content: msg.content,
+        timestamp: msg.timestamp.toISOString()
+      }));
+      
+      await DatabaseService.updateConversationHistory(conversationId, allMessages);
+    }
   };
+
+  // Handle conversation end (when user navigates away or closes)
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (conversationId) {
+        DatabaseService.endConversation(conversationId);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      if (conversationId) {
+        DatabaseService.endConversation(conversationId);
+      }
+    };
+  }, [conversationId]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
