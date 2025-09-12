@@ -70,6 +70,10 @@ class CustomerData(BaseModel):
     monthlyInvestment: Optional[str] = None
     investmentGoal: Optional[str] = None
     
+    # Home insurance specific
+    homeAge: Optional[str] = None
+    homeGender: Optional[str] = None
+    
     currentProvider: Optional[str] = None
 
 class InsuranceProductsRequest(BaseModel):
@@ -125,19 +129,41 @@ class DatabaseService:
             conn = DatabaseService.get_connection()
             cursor = conn.cursor()
             
+            # Map frontend insurance types to database product_type values
+            type_mapping = {
+                'car': 'auto',
+                'auto': 'auto',
+                'term': 'term_life',
+                'term_life': 'term_life',
+                'health': 'health',
+                'savings': 'savings',
+                'home': 'home'
+            }
+            
+            db_product_type = type_mapping.get(product_type, product_type)
+            
             query = """
                 SELECT * FROM insurance_products 
                 WHERE product_type = ? AND is_active = 1
             """
-            params = [product_type]
+            params = [db_product_type]
             
             if age:
                 query += " AND min_age <= ? AND max_age >= ?"
                 params.extend([age, age])
             
             if gender:
+                # Map frontend gender values to database values
+                gender_mapping = {
+                    'Male': 'male',
+                    'Female': 'female',
+                    'male': 'male',
+                    'female': 'female',
+                    'non_binary': 'non_binary'
+                }
+                db_gender = gender_mapping.get(gender, gender.lower() if gender else None)
                 query += " AND (target_gender = ? OR target_gender = 'all')"
-                params.append(gender)
+                params.append(db_gender)
             
             query += " ORDER BY premium_amount ASC"
             
@@ -149,7 +175,7 @@ class DatabaseService:
                 results.append(dict(zip(columns, row)))
             
             conn.close()
-            logger.info(f"Found {len(results)} insurance products for {product_type}")
+            logger.info(f"Found {len(results)} insurance products for {db_product_type}")
             return results
             
         except Exception as e:
@@ -166,43 +192,88 @@ class DatabaseService:
             conn = DatabaseService.get_connection()
             cursor = conn.cursor()
             
+            # Map frontend insurance types to database values
+            insurance_type_mapping = {
+                'car': 'auto',
+                'auto': 'auto', 
+                'term': 'term_life',
+                'term_life': 'term_life',
+                'health': 'health',
+                'savings': 'savings',
+                'home': 'home'
+            }
+            
+            db_insurance_type = insurance_type_mapping.get(customer_data.insuranceType, customer_data.insuranceType)
+            
             # Format data according to database schema
             formatted_data = {
                 'name': customer_data.name.strip(),
                 'email': customer_data.email.lower().strip(),
                 'phone': customer_data.phone.strip(),
                 'zip_code': customer_data.zipCode.strip(),
-                'insurance_type': customer_data.insuranceType,
+                'insurance_type': db_insurance_type,
                 'current_provider': customer_data.currentProvider.strip() if customer_data.currentProvider else None,
                 'lead_source': 'website'
             }
             
             # Add type-specific fields
-            if customer_data.insuranceType == 'auto':
+            if db_insurance_type == 'auto':
                 formatted_data.update({
                     'vehicle_number': customer_data.vehicleNumber.strip() if customer_data.vehicleNumber else None,
                     'vehicle_model': customer_data.vehicleModel.strip() if customer_data.vehicleModel else None,
                     'vehicle_year': int(customer_data.vehicleYear) if customer_data.vehicleYear else None
                 })
-            elif customer_data.insuranceType == 'health':
+            elif db_insurance_type == 'health':
+                # Map gender values
+                gender_value = None
+                if customer_data.gender:
+                    gender_mapping = {'Male': 'male', 'Female': 'female', 'male': 'male', 'female': 'female'}
+                    gender_value = gender_mapping.get(customer_data.gender, customer_data.gender.lower())
+                
                 formatted_data.update({
                     'age': int(customer_data.age) if customer_data.age else None,
-                    'gender': customer_data.gender,
+                    'gender': gender_value,
                     'medical_history': customer_data.medicalHistory.strip() if customer_data.medicalHistory else None
                 })
-            elif customer_data.insuranceType == 'term_life':
+            elif db_insurance_type == 'term_life':
+                # Map gender values
+                gender_value = None
+                if customer_data.lifeGender or customer_data.gender:
+                    gender_raw = customer_data.lifeGender or customer_data.gender
+                    gender_mapping = {'Male': 'male', 'Female': 'female', 'male': 'male', 'female': 'female'}
+                    gender_value = gender_mapping.get(gender_raw, gender_raw.lower())
+                
                 formatted_data.update({
                     'age': int(customer_data.lifeAge or customer_data.age) if (customer_data.lifeAge or customer_data.age) else None,
-                    'gender': customer_data.lifeGender or customer_data.gender,
+                    'gender': gender_value,
                     'coverage_amount': customer_data.coverageAmount.strip() if customer_data.coverageAmount else None,
                     'relationship': customer_data.relationship
                 })
-            elif customer_data.insuranceType == 'savings':
+            elif db_insurance_type == 'savings':
+                # Map gender values
+                gender_value = None
+                if customer_data.savingsGender or customer_data.gender:
+                    gender_raw = customer_data.savingsGender or customer_data.gender
+                    gender_mapping = {'Male': 'male', 'Female': 'female', 'male': 'male', 'female': 'female'}
+                    gender_value = gender_mapping.get(gender_raw, gender_raw.lower())
+                
                 formatted_data.update({
                     'age': int(customer_data.savingsAge or customer_data.age) if (customer_data.savingsAge or customer_data.age) else None,
-                    'gender': customer_data.savingsGender or customer_data.gender,
+                    'gender': gender_value,
                     'monthly_investment': customer_data.monthlyInvestment.strip() if customer_data.monthlyInvestment else None,
                     'investment_goal': customer_data.investmentGoal.strip() if customer_data.investmentGoal else None
+                })
+            elif db_insurance_type == 'home':
+                # Map gender values
+                gender_value = None
+                if customer_data.homeGender or customer_data.gender:
+                    gender_raw = customer_data.homeGender or customer_data.gender
+                    gender_mapping = {'Male': 'male', 'Female': 'female', 'male': 'male', 'female': 'female'}
+                    gender_value = gender_mapping.get(gender_raw, gender_raw.lower())
+                
+                formatted_data.update({
+                    'age': int(customer_data.homeAge or customer_data.age) if (customer_data.homeAge or customer_data.age) else None,
+                    'gender': gender_value
                 })
             
             # Build INSERT query
@@ -248,8 +319,21 @@ class DatabaseService:
         if len(customer_data.phone) < 10:
             raise HTTPException(status_code=400, detail="Phone number must be at least 10 digits")
         
+        # Map frontend insurance types to database values for validation
+        insurance_type_mapping = {
+            'car': 'auto',
+            'auto': 'auto',
+            'term': 'term_life', 
+            'term_life': 'term_life',
+            'health': 'health',
+            'savings': 'savings',
+            'home': 'home'
+        }
+        
+        db_insurance_type = insurance_type_mapping.get(customer_data.insuranceType, customer_data.insuranceType)
+        
         # Type-specific validation
-        if customer_data.insuranceType == 'auto':
+        if db_insurance_type == 'auto':
             if not customer_data.vehicleNumber or not customer_data.vehicleNumber.strip():
                 raise HTTPException(status_code=400, detail="Vehicle number is required for auto insurance")
             if not customer_data.vehicleModel or not customer_data.vehicleModel.strip():
@@ -257,7 +341,7 @@ class DatabaseService:
             if not customer_data.vehicleYear:
                 raise HTTPException(status_code=400, detail="Vehicle year is required for auto insurance")
         
-        elif customer_data.insuranceType in ['health', 'term_life', 'savings']:
+        elif db_insurance_type in ['health', 'term_life', 'savings', 'home']:
             age_field = customer_data.lifeAge or customer_data.savingsAge or customer_data.age
             gender_field = customer_data.lifeGender or customer_data.savingsGender or customer_data.gender
             
@@ -266,13 +350,13 @@ class DatabaseService:
             if not gender_field:
                 raise HTTPException(status_code=400, detail="Gender is required")
             
-            if customer_data.insuranceType == 'term_life':
+            if db_insurance_type == 'term_life':
                 if not customer_data.coverageAmount or not customer_data.coverageAmount.strip():
                     raise HTTPException(status_code=400, detail="Coverage amount is required for term life insurance")
                 if not customer_data.relationship:
                     raise HTTPException(status_code=400, detail="Relationship is required for term life insurance")
             
-            if customer_data.insuranceType == 'savings':
+            if db_insurance_type == 'savings':
                 if not customer_data.monthlyInvestment or not customer_data.monthlyInvestment.strip():
                     raise HTTPException(status_code=400, detail="Monthly investment is required for savings plans")
                 if not customer_data.investmentGoal or not customer_data.investmentGoal.strip():
@@ -362,7 +446,7 @@ class LLMService:
         }
 
         available_products = '\n'.join([
-            f"{p['provider_name']} - {p['product_name']}: ₹{p['premium_amount']}/month, Coverage: {p['coverage_details']}"
+            f"{p['provider_name']} - {p['product_name']}: ₹{p['premium_amount']:.2f}/month, Coverage: {p['coverage_details']}"
             for p in products
         ])
 
@@ -633,7 +717,19 @@ async def handle_chat_message(request: ChatMessage):
 def generate_simple_response(message: str, context: CustomerData) -> str:
     """Generate simple rule-based responses"""
     lower_message = message.lower()
-    insurance_type = context.insuranceType
+    
+    # Map frontend insurance types to database values
+    insurance_type_mapping = {
+        'car': 'auto',
+        'auto': 'auto',
+        'term': 'term_life',
+        'term_life': 'term_life',
+        'health': 'health',
+        'savings': 'savings',
+        'home': 'home'
+    }
+    
+    insurance_type = insurance_type_mapping.get(context.insuranceType, context.insuranceType)
     name = context.name
     
     # Auto insurance responses
@@ -663,6 +759,13 @@ def generate_simple_response(message: str, context: CustomerData) -> str:
             return f"Great question about returns, {name}! Our savings plans typically offer 6-8% annual returns, which is much better than traditional savings accounts. Plus, you get tax benefits and life insurance protection. Would you like to see how your money could grow over time?"
         elif any(word in lower_message for word in ['flexible', 'change', 'increase']):
             return "Absolutely! Our savings plans are very flexible. You can increase your contributions, take partial withdrawals after 5 years, and even pause payments if needed. Life happens, and your plan should adapt with you. What kind of flexibility is most important to you?"
+    
+    # Home insurance responses
+    elif insurance_type == 'home':
+        if any(word in lower_message for word in ['quote', 'price', 'cost', 'rate']):
+            return f"Home insurance rates depend on your property value and location, {name}. Most homeowners in your area pay between $800-2000 per year. I can help you find competitive rates that protect your most valuable asset. Would you like me to get you some quotes?"
+        elif any(word in lower_message for word in ['coverage', 'protection', 'what']):
+            return "Home insurance should cover your dwelling, personal property, liability, and additional living expenses. This protects you from fire, theft, storms, and accidents on your property. What's most important to you - protecting the structure or your belongings?"
     
     # General responses
     if any(word in lower_message for word in ['thank', 'thanks', 'appreciate']):
