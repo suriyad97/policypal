@@ -99,27 +99,27 @@ export class DatabaseService {
           break;
           
         case 'health':
-          formattedData.age = parseInt(customerData.age);
+          formattedData.age = parseInt(customerData.age) || null;
           formattedData.gender = customerData.gender;
           formattedData.medical_history = customerData.medicalHistory?.trim() || null;
           break;
           
         case 'term_life':
-          formattedData.age = parseInt(customerData.lifeAge || customerData.age);
+          formattedData.age = parseInt(customerData.lifeAge || customerData.age) || null;
           formattedData.gender = customerData.lifeGender || customerData.gender;
           formattedData.coverage_amount = customerData.coverageAmount?.trim();
           formattedData.relationship = customerData.relationship;
           break;
           
         case 'savings':
-          formattedData.age = parseInt(customerData.savingsAge || customerData.age);
+          formattedData.age = parseInt(customerData.savingsAge || customerData.age) || null;
           formattedData.gender = customerData.savingsGender || customerData.gender;
           formattedData.monthly_investment = customerData.monthlyInvestment?.trim();
           formattedData.investment_goal = customerData.investmentGoal?.trim();
           break;
           
         case 'home':
-          formattedData.age = parseInt(customerData.age);
+          formattedData.age = parseInt(customerData.age) || null;
           formattedData.gender = customerData.gender;
           break;
       }
@@ -203,11 +203,11 @@ export class DatabaseService {
       case 'term_life':
       case 'savings':
       case 'home':
-        const ageField = customerData.lifeAge || customerData.savingsAge || customerData.age;
+        const ageField = parseInt(customerData.lifeAge || customerData.savingsAge || customerData.age);
         const genderField = customerData.lifeGender || customerData.savingsGender || customerData.gender;
         
-        if (!ageField || isNaN(parseInt(ageField))) {
-          throw new Error('Valid age is required');
+        if (!ageField || isNaN(ageField) || ageField < 18 || ageField > 80) {
+          throw new Error('Valid age between 18 and 80 is required');
         }
         if (!genderField) {
           throw new Error('Gender is required');

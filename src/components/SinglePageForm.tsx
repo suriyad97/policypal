@@ -46,7 +46,6 @@ const insuranceTypes = [
   { id: 'savings', label: 'Savings', icon: Briefcase, color: 'from-green-500 to-green-600' }
 ];
 
-const ageRanges = ['18-25', '26-35', '36-45', '46-55', '56-65', '65+'];
 const genderOptions = ['Male', 'Female'];
 const relationshipOptions = [
   { id: 'self', label: 'Self', icon: User },
@@ -160,34 +159,24 @@ export const SinglePageForm: React.FC<SinglePageFormProps> = ({ onComplete }) =>
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Health Insurance Details</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <label className="block text-sm font-medium text-gray-700">Age Range</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {ageRanges.map((range, index) => (
-                    <motion.label
-                      key={range}
-                      className={`cursor-pointer p-3 rounded-lg border-2 text-center transition-all duration-200 hover:shadow-md ${
-                        formData.age === range 
-                          ? 'border-red-500 bg-red-50 text-red-700' 
-                          : 'border-gray-200 bg-white hover:border-red-300'
-                      }`}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                    >
-                      <input
-                        {...register('age', { required: 'Age range is required' })}
-                        type="radio"
-                        value={range}
-                        className="sr-only"
-                      />
-                      <span className="font-medium text-sm">{range}</span>
-                    </motion.label>
-                  ))}
+              <div className="relative">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Age</label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    {...register('age', { 
+                      required: 'Age is required',
+                      min: { value: 18, message: 'Age must be at least 18' },
+                      max: { value: 80, message: 'Age must be less than 80' }
+                    })}
+                    type="number"
+                    min="18"
+                    max="80"
+                    placeholder="Enter your age"
+                    className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-xl focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none transition-all bg-white"
+                  />
                 </div>
-                {errors.age && <span className="text-red-500 text-sm">{errors.age.message}</span>}
+                {errors.age && <span className="text-red-500 text-sm mt-1 block">{errors.age.message}</span>}
               </div>
 
               <div className="space-y-3">
@@ -243,34 +232,24 @@ export const SinglePageForm: React.FC<SinglePageFormProps> = ({ onComplete }) =>
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Term Life Insurance Details</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <label className="block text-sm font-medium text-gray-700">Age Range</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {ageRanges.map((range, index) => (
-                    <motion.label
-                      key={range}
-                      className={`cursor-pointer p-3 rounded-lg border-2 text-center transition-all duration-200 hover:shadow-md ${
-                        formData.lifeAge === range 
-                          ? 'border-purple-500 bg-purple-50 text-purple-700' 
-                          : 'border-gray-200 bg-white hover:border-purple-300'
-                      }`}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                    >
-                      <input
-                        {...register('lifeAge', { required: 'Age range is required' })}
-                        type="radio"
-                        value={range}
-                        className="sr-only"
-                      />
-                      <span className="font-medium text-sm">{range}</span>
-                    </motion.label>
-                  ))}
+              <div className="relative">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Age</label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    {...register('lifeAge', { 
+                      required: 'Age is required',
+                      min: { value: 18, message: 'Age must be at least 18' },
+                      max: { value: 80, message: 'Age must be less than 80' }
+                    })}
+                    type="number"
+                    min="18"
+                    max="80"
+                    placeholder="Enter your age"
+                    className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all bg-white"
+                  />
                 </div>
-                {errors.lifeAge && <span className="text-red-500 text-sm">{errors.lifeAge.message}</span>}
+                {errors.lifeAge && <span className="text-red-500 text-sm mt-1 block">{errors.lifeAge.message}</span>}
               </div>
 
               <div className="space-y-3">
@@ -379,34 +358,24 @@ export const SinglePageForm: React.FC<SinglePageFormProps> = ({ onComplete }) =>
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Savings Plan Details</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <label className="block text-sm font-medium text-gray-700">Age Range</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {ageRanges.map((range, index) => (
-                    <motion.label
-                      key={range}
-                      className={`cursor-pointer p-3 rounded-lg border-2 text-center transition-all duration-200 hover:shadow-md ${
-                        formData.savingsAge === range 
-                          ? 'border-green-500 bg-green-50 text-green-700' 
-                          : 'border-gray-200 bg-white hover:border-green-300'
-                      }`}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                    >
-                      <input
-                        {...register('savingsAge', { required: 'Age range is required' })}
-                        type="radio"
-                        value={range}
-                        className="sr-only"
-                      />
-                      <span className="font-medium text-sm">{range}</span>
-                    </motion.label>
-                  ))}
+              <div className="relative">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Age</label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    {...register('savingsAge', { 
+                      required: 'Age is required',
+                      min: { value: 18, message: 'Age must be at least 18' },
+                      max: { value: 80, message: 'Age must be less than 80' }
+                    })}
+                    type="number"
+                    min="18"
+                    max="80"
+                    placeholder="Enter your age"
+                    className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition-all bg-white"
+                  />
                 </div>
-                {errors.savingsAge && <span className="text-red-500 text-sm">{errors.savingsAge.message}</span>}
+                {errors.savingsAge && <span className="text-red-500 text-sm mt-1 block">{errors.savingsAge.message}</span>}
               </div>
 
               <div className="space-y-3">
