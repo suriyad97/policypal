@@ -26,7 +26,9 @@ interface ChatInterfaceProps {
 const LLM_CONFIG = {
   endpoint: import.meta.env.VITE_LLM_ENDPOINT,
   subscriptionKey: import.meta.env.VITE_LLM_SUBSCRIPTION_KEY,
-  deploymentName: import.meta.env.VITE_LLM_DEPLOYMENT_NAME // For Azure OpenAI
+  deploymentName: import.meta.env.VITE_LLM_DEPLOYMENT_NAME, // For Azure OpenAI
+  modelName: import.meta.env.VITE_LLM_MODEL_NAME,
+  apiVersion: import.meta.env.VITE_LLM_API_VERSION
 };
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }) => {
@@ -92,8 +94,7 @@ Start the conversation by greeting them personally and acknowledging their speci
           messages: messages,
           max_tokens: 500,
           temperature: 0.7,
-          // For Azure OpenAI, you might need to specify the deployment:
-          // model: LLM_CONFIG.deploymentName,
+          model: LLM_CONFIG.modelName || LLM_CONFIG.deploymentName,
         }),
       });
 
