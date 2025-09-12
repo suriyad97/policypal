@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Bot, User, Sparkles, Shield, Phone, Mail, MapPin, Calendar, CheckCircle, Star, Award, Users } from 'lucide-react';
 import { FormData } from './SinglePageForm';
-import { DatabaseService, InsuranceProduct } from '../lib/supabase';
+import { DatabaseService, InsuranceProduct } from '../lib/database';
 
 interface Message {
   id: string;
@@ -38,7 +38,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }
   const [isTyping, setIsTyping] = useState(false);
   const [showQuotes, setShowQuotes] = useState(false);
   const [customerId, setCustomerId] = useState<string | null>(null);
-  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<number | null>(null);
   const [insuranceProducts, setInsuranceProducts] = useState<InsuranceProduct[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -51,29 +51,30 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }
   }, [messages]);
 
   // Generate system prompt based on form data
-  const generateSystemPrompt = (formData: FormData, products: InsuranceProduct[]) => {
+  const generateSystemPrompt = (formData: FormData, products: InsuranceProduct[], customer: any) => {
     const insuranceContext = {
-      car: `The customer is looking for car insurance for their ${formData.vehicleModel} (${formData.vehicleYear}) with registration number ${formData.vehicleNumber}.`,
-      health: `The customer is a ${formData.age} year old ${formData.gender?.toLowerCase()} looking for health insurance. ${formData.medicalHistory ? `Medical history: ${formData.medicalHistory}` : 'No pre-existing conditions mentioned.'}`,
-      term: `The customer is a ${formData.lifeAge} year old ${formData.lifeGender?.toLowerCase()} looking for term life insurance with ${formData.coverageAmount} coverage for ${formData.relationship}.`,
-      savings: `The customer is a ${formData.savingsAge} year old ${formData.savingsGender?.toLowerCase()} looking for a savings plan with ₹${formData.monthlyInvestment} monthly investment for ${formData.investmentGoal}.`
+      auto: `The customer is looking for auto insurance for their ${customer.vehicle_model} (${customer.vehicle_year}) with registration number ${customer.vehicle_number}.`,
+      health: `The customer is a ${customer.age} year old ${customer.gender} looking for health insurance. ${customer.medical_history ? `Medical history: ${customer.medical_history}` : 'No pre-existing conditions mentioned.'}`,
+      term_life: `The customer is a ${customer.age} year old ${customer.gender} looking for term life insurance with ${customer.coverage_amount} coverage for ${customer.relationship}.`,
+      savings: `The customer is a ${customer.age} year old ${customer.gender} looking for a savings plan with ${customer.monthly_investment} monthly investment for ${customer.investment_goal}.`,
+      home: `The customer is a ${customer.age} year old ${customer.gender} looking for home insurance.`
     };
 
     const availableProducts = products.map(p => 
-      `${p.provider_name} - ${p.product_name}: ₹${p.base_premium}/month, Coverage: ${p.coverage_amount || 'Standard'}`
+      `${p.provider_name} - ${p.product_name}: ₹${p.premium_amount}/month, Coverage: ${p.coverage_details}`
     ).join('\n');
 
-    return `You are PolicyPal, a professional and friendly insurance advisor. You are helping ${formData.name} from ${formData.zipCode} with their ${formData.insuranceType} insurance needs.
+    return `You are PolicyPal, a professional and friendly insurance advisor. You are helping ${customer.name} from ${customer.zip_code} with their ${customer.insurance_type} insurance needs.
 
 Customer Details:
-- Name: ${formData.name}
-- Location: ${formData.zipCode}
-- Email: ${formData.email}
-- Phone: ${formData.phone}
-- Insurance Type: ${formData.insuranceType}
-${formData.currentProvider ? `- Current Provider: ${formData.currentProvider}` : ''}
+- Name: ${customer.name}
+- Location: ${customer.zip_code}
+- Email: ${customer.email}
+- Phone: ${customer.phone}
+- Insurance Type: ${customer.insurance_type}
+${customer.current_provider ? `- Current Provider: ${customer.current_provider}` : ''}
 
-Context: ${insuranceContext[formData.insuranceType as keyof typeof insuranceContext] || 'General insurance inquiry.'}
+Context: ${insuranceContext[customer.insurance_type as keyof typeof insuranceContext] || 'General insurance inquiry.'}
 
 Available Insurance Products:
 ${availableProducts}
@@ -138,29 +139,39 @@ Start the conversation by greeting them personally and acknowledging their speci
       setIsTyping(true);
       
       try {
-        // 1. Fetch insurance products from database
-        const products = await DatabaseService.getInsuranceProducts(formData.insuranceType);
-        setInsuranceProducts(products);
+        // 1. Store customer data in database first
+        const storedCustomerId = await DatabaseService.storeCustomer(formData);
+        if (!storedCustomerId) {
+          throw new Error('Failed to store customer data');
+        }
+        setCustomerId(storedCustomerId.toString());
         
-        // 2. Store customer data in appropriate table
-        const storedCustomerId = await DatabaseService.storeCustomer(formData, formData.insuranceType);
-        if (storedCustomerId) {
-          setCustomerId(storedCustomerId);
-          
-          // 3. Create conversation history record
-          const sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
-          const conversationHistoryId = await DatabaseService.createConversationHistory(
-            storedCustomerId,
-            formData.insuranceType,
-            sessionId
-          );
-          setConversationId(conversationHistoryId);
+        // 2. Get stored customer data for context
+        const customer = await DatabaseService.getCustomer(storedCustomerId);
+        if (!customer) {
+          throw new Error('Failed to retrieve customer data');
         }
         
-        // 4. Generate system prompt with product data
-        const systemPrompt = generateSystemPrompt(formData, products);
+        // 3. Fetch relevant insurance products from database
+        const products = await DatabaseService.getInsuranceProducts(
+          formData.insuranceType,
+          customer.age,
+          customer.gender
+        );
+        setInsuranceProducts(products);
         
-        // 5. Initialize LLM conversation
+        // 4. Create conversation history record
+        const sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+        const conversationHistoryId = await DatabaseService.createConversationHistory(
+          storedCustomerId,
+          sessionId
+        );
+        setConversationId(conversationHistoryId);
+        
+        // 5. Generate system prompt with product data and customer context
+        const systemPrompt = generateSystemPrompt(formData, products, customer);
+        
+        // 6. Initialize LLM conversation
         const initialMessages = [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: 'Hello, I would like to get started with my insurance quote.' }
@@ -177,7 +188,7 @@ Start the conversation by greeting them personally and acknowledging their speci
 
         setMessages([initialMessage]);
         
-        // 6. Store initial conversation in database
+        // 7. Store initial conversation in database
         if (conversationHistoryId) {
           await DatabaseService.updateConversationHistory(conversationHistoryId, [
             { role: 'assistant', content: response, timestamp: new Date().toISOString() }
@@ -191,7 +202,7 @@ Start the conversation by greeting them personally and acknowledging their speci
         const fallbackMessage: Message = {
           id: '1',
           type: 'bot',
-          content: `Hello ${formData.name}! 👋 I'm PolicyPal, your personal insurance advisor. I'm here to help you find the perfect ${formData.insuranceType} insurance coverage. Let me know what questions you have!`,
+          content: `Hello ${formData.name}! 👋 I'm PolicyPal, your personal insurance advisor. I'm here to help you find the perfect ${formData.insuranceType} insurance coverage. I'm having trouble accessing our product database right now, but I can still help answer your questions!`,
           timestamp: new Date(),
         };
         setMessages([fallbackMessage]);
@@ -218,8 +229,15 @@ Start the conversation by greeting them personally and acknowledging their speci
     setInputValue('');
     setIsTyping(true);
 
-    // Build conversation history for LLM
-    const systemPrompt = generateSystemPrompt(formData, insuranceProducts);
+    try {
+      // Get customer data for context
+      const customer = customerId ? await DatabaseService.getCustomer(parseInt(customerId)) : null;
+      if (!customer) {
+        throw new Error('Customer data not found');
+      }
+
+      // Build conversation history for LLM
+      const systemPrompt = generateSystemPrompt(formData, insuranceProducts, customer);
     const conversationHistory = [
       { role: 'system', content: systemPrompt },
       ...messages.map(msg => ({
@@ -229,7 +247,7 @@ Start the conversation by greeting them personally and acknowledging their speci
       { role: 'user', content: currentInput }
     ];
 
-    const response = await callLLMAPI(conversationHistory);
+      const response = await callLLMAPI(conversationHistory);
     
     const botMessage: Message = {
       id: (Date.now() + 1).toString(),
@@ -238,7 +256,7 @@ Start the conversation by greeting them personally and acknowledging their speci
       timestamp: new Date(),
     };
 
-    setIsTyping(false);
+      setIsTyping(false);
     setMessages(prev => [...prev, botMessage]);
     
     // Update conversation history in database
@@ -250,6 +268,17 @@ Start the conversation by greeting them personally and acknowledging their speci
       }));
       
       await DatabaseService.updateConversationHistory(conversationId, allMessages);
+    }
+    } catch (error) {
+      console.error('Error in handleSendMessage:', error);
+      setIsTyping(false);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'bot',
+        content: "I apologize, but I'm having trouble processing your request right now. Please try again or contact our support team for assistance.",
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
     }
   };
 
