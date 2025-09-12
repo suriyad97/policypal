@@ -40,15 +40,15 @@ interface ChatInterfaceProps {
 
 // LLM Configuration from environment variables
 const LLM_CONFIG = {
-  endpoint: import.meta.env.VITE_LLM_ENDPOINT,
-  subscriptionKey: import.meta.env.VITE_LLM_SUBSCRIPTION_KEY,
-  deploymentName: import.meta.env.VITE_LLM_DEPLOYMENT_NAME, // For Azure OpenAI
-  modelName: import.meta.env.VITE_LLM_MODEL_NAME,
-  apiVersion: import.meta.env.VITE_LLM_API_VERSION
+  endpoint: import.meta.env.VITE_LLM_ENDPOINT || '',
+  subscriptionKey: import.meta.env.VITE_LLM_SUBSCRIPTION_KEY || '',
+  deploymentName: import.meta.env.VITE_LLM_DEPLOYMENT_NAME || '', // For Azure OpenAI
+  modelName: import.meta.env.VITE_LLM_MODEL_NAME || 'gpt-3.5-turbo',
+  apiVersion: import.meta.env.VITE_LLM_API_VERSION || '2024-02-15-preview'
 };
 
 // Backend API base URL
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 // Database API functions
 const DatabaseAPI = {
