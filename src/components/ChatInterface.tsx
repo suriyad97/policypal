@@ -42,9 +42,9 @@ interface ChatInterfaceProps {
 const LLM_CONFIG = {
   endpoint: import.meta.env.VITE_LLM_ENDPOINT || '',
   subscriptionKey: import.meta.env.VITE_LLM_SUBSCRIPTION_KEY || '',
-  deploymentName: import.meta.env.VITE_LLM_DEPLOYMENT_NAME || '', // For Azure OpenAI
-  modelName: import.meta.env.VITE_LLM_MODEL_NAME || 'gpt-3.5-turbo',
-  apiVersion: import.meta.env.VITE_LLM_API_VERSION || '2024-02-15-preview'
+  deploymentName: import.meta.env.VITE_LLM_DEPLOYMENT_NAME || '', 
+  modelName: import.meta.env.VITE_LLM_MODEL_NAME || 
+  apiVersion: import.meta.env.VITE_LLM_API_VERSION || 
 };
 
 // Backend API base URL
