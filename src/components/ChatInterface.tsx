@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Bot, User, Sparkles, Shield, Phone, Mail, MapPin, Calendar, CheckCircle, Star, Award, Users } from 'lucide-react';
-import { FormData } from './QuickForm';
+import { FormData } from './SinglePageForm';
 
 interface Message {
   id: string;
@@ -22,6 +22,13 @@ interface ChatInterfaceProps {
   onBack: () => void;
 }
 
+// LLM Configuration - Replace with your actual values
+const LLM_CONFIG = {
+  endpoint: 'YOUR_LLM_ENDPOINT_HERE', // Replace with your endpoint
+  subscriptionKey: 'YOUR_SUBSCRIPTION_KEY_HERE', // Replace with your key
+  deploymentName: 'YOUR_DEPLOYMENT_NAME_HERE' // Replace with your deployment name (if using Azure OpenAI)
+};
+
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -37,78 +44,108 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }
     scrollToBottom();
   }, [messages]);
 
-  useEffect(() => {
-    // Initial professional greeting
-    const initialMessage: Message = {
-      id: '1',
-      type: 'bot',
-      content: `Hello ${formData.name}, thank you for choosing PolicyPal. I'm your dedicated insurance advisor, and I'm here to help you find the perfect ${formData.insuranceType} insurance coverage in ${formData.zipCode}. Let me ask you a few quick questions to ensure we find you the best rates and coverage options.`,
-      timestamp: new Date(),
+  // Generate system prompt based on form data
+  const generateSystemPrompt = (formData: FormData) => {
+    const insuranceContext = {
+      car: `The customer is looking for car insurance for their ${formData.vehicleModel} (${formData.vehicleYear}) with registration number ${formData.vehicleNumber}.`,
+      health: `The customer is a ${formData.age} year old ${formData.gender?.toLowerCase()} looking for health insurance. ${formData.medicalHistory ? `Medical history: ${formData.medicalHistory}` : 'No pre-existing conditions mentioned.'}`,
+      term: `The customer is a ${formData.lifeAge} year old ${formData.lifeGender?.toLowerCase()} looking for term life insurance with ${formData.coverageAmount} coverage for ${formData.relationship}.`,
+      savings: `The customer is a ${formData.savingsAge} year old ${formData.savingsGender?.toLowerCase()} looking for a savings plan with ₹${formData.monthlyInvestment} monthly investment for ${formData.investmentGoal}.`
     };
 
-    setMessages([initialMessage]);
+    return `You are PolicyPal, a professional and friendly insurance advisor. You are helping ${formData.name} from ${formData.zipCode} with their ${formData.insuranceType} insurance needs.
 
-    // Professional follow-up question
-    setTimeout(() => {
-      let followUpQuestion = '';
-      switch (formData.insuranceType) {
-        case 'auto':
-          followUpQuestion = "To provide you with accurate quotes, I'll need some details about your vehicle. What is the make, model, and year of the car you'd like to insure?";
-          break;
-        case 'home':
-          followUpQuestion = "To calculate your home insurance premium, could you please tell me the approximate value of your home and the year it was built?";
-          break;
-        case 'health':
-          followUpQuestion = "For your health insurance needs, are you looking for individual coverage or family coverage? Also, do you have any preferred healthcare providers?";
-          break;
-        case 'life':
-          followUpQuestion = "To recommend the right life insurance policy, what coverage amount are you considering, and are you interested in term or whole life insurance?";
-          break;
-        default:
-          followUpQuestion = "What specific coverage requirements do you have? This will help me match you with the most suitable insurance providers.";
-      }
+Customer Details:
+- Name: ${formData.name}
+- Location: ${formData.zipCode}
+- Email: ${formData.email}
+- Phone: ${formData.phone}
+- Insurance Type: ${formData.insuranceType}
+${formData.currentProvider ? `- Current Provider: ${formData.currentProvider}` : ''}
 
-      const followUp: Message = {
-        id: '2',
-        type: 'bot',
-        content: followUpQuestion,
-        timestamp: new Date(),
-      };
-      
-      setIsTyping(true);
-      setTimeout(() => {
-        setIsTyping(false);
-        setMessages(prev => [...prev, followUp]);
-      }, 1500);
-    }, 2000);
-  }, [formData]);
+Context: ${insuranceContext[formData.insuranceType as keyof typeof insuranceContext] || 'General insurance inquiry.'}
 
-  const generateQuote = () => {
-    const quotes = [
-      {
-        provider: "State Farm",
-        monthlyRate: "$89",
-        coverage: "Full Coverage",
-        savings: "Save $240/year"
-      },
-      {
-        provider: "Geico",
-        monthlyRate: "$76",
-        coverage: "Comprehensive",
-        savings: "Save $380/year"
-      },
-      {
-        provider: "Progressive",
-        monthlyRate: "$82",
-        coverage: "Premium Plus",
-        savings: "Save $290/year"
-      }
-    ];
+Instructions:
+1. Be professional, helpful, and knowledgeable about insurance
+2. Ask relevant follow-up questions to better understand their needs
+3. Provide personalized recommendations based on their information
+4. Explain insurance terms in simple language
+5. Focus on finding the best coverage for their specific situation
+6. Keep responses concise but informative
+7. Show empathy and build trust
 
-    return quotes[Math.floor(Math.random() * quotes.length)];
+Start the conversation by greeting them personally and acknowledging their specific insurance needs.`;
   };
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  // Call LLM API
+  const callLLMAPI = async (messages: { role: string; content: string }[]) => {
+    try {
+      const response = await fetch(LLM_CONFIG.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${LLM_CONFIG.subscriptionKey}`,
+          // For Azure OpenAI, use this header instead:
+          // 'api-key': LLM_CONFIG.subscriptionKey,
+        },
+        body: JSON.stringify({
+          messages: messages,
+          max_tokens: 500,
+          temperature: 0.7,
+          // For Azure OpenAI, you might need to specify the deployment:
+          // model: LLM_CONFIG.deploymentName,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Handle different API response formats
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        return data.choices[0].message.content;
+      } else if (data.content) {
+        return data.content;
+      } else {
+        throw new Error('Unexpected API response format');
+      }
+    } catch (error) {
+      console.error('LLM API Error:', error);
+      // Fallback response
+      return "I apologize, but I'm having trouble connecting to our AI system right now. However, I'm still here to help you with your insurance needs! Could you tell me more about what specific coverage you're looking for?";
+    }
+  };
+
+  useEffect(() => {
+    // Initialize conversation with LLM
+    const initializeChat = async () => {
+      setIsTyping(true);
+      
+      const systemPrompt = generateSystemPrompt(formData);
+      const initialMessages = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: 'Hello, I would like to get started with my insurance quote.' }
+      ];
+
+      const response = await callLLMAPI(initialMessages);
+      
+      const initialMessage: Message = {
+        id: '1',
+        type: 'bot',
+        content: response,
+        timestamp: new Date(),
+      };
+
+      setIsTyping(false);
+      setMessages([initialMessage]);
+    };
+
+    initializeChat();
+  }, [formData]);
+
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim()) return;
 
@@ -120,50 +157,31 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const currentInput = inputValue;
     setInputValue('');
     setIsTyping(true);
 
-    // Professional bot responses
-    setTimeout(() => {
-      const professionalResponses = [
-        "Thank you for that information. Based on your details, I'm finding excellent coverage options that could significantly reduce your current premiums.",
-        "Perfect! I'm analyzing your requirements with our network of A-rated insurance providers to ensure you get the best value.",
-        "Excellent. I'm matching your profile with our top-rated carriers who specialize in your coverage needs.",
-        "Thank you. I'm now comparing rates from multiple providers to find you the most competitive options available."
-      ];
+    // Build conversation history for LLM
+    const conversationHistory = [
+      { role: 'system', content: generateSystemPrompt(formData) },
+      ...messages.map(msg => ({
+        role: msg.type === 'user' ? 'user' : 'assistant',
+        content: msg.content
+      })),
+      { role: 'user', content: currentInput }
+    ];
 
-      const botMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'bot',
-        content: professionalResponses[Math.floor(Math.random() * professionalResponses.length)],
-        timestamp: new Date(),
-      };
+    const response = await callLLMAPI(conversationHistory);
+    
+    const botMessage: Message = {
+      id: (Date.now() + 1).toString(),
+      type: 'bot',
+      content: response,
+      timestamp: new Date(),
+    };
 
-      setIsTyping(false);
-      setMessages(prev => [...prev, botMessage]);
-
-      // Show quote after a few exchanges
-      if (messages.length >= 4) {
-        setTimeout(() => {
-          const quoteData = generateQuote();
-          const quoteMessage: Message = {
-            id: (Date.now() + 2).toString(),
-            type: 'bot',
-            content: `Great news! I found an excellent option for you. Here's a personalized quote from one of our top-rated providers:`,
-            timestamp: new Date(),
-            isQuote: true,
-            quoteData
-          };
-
-          setIsTyping(true);
-          setTimeout(() => {
-            setIsTyping(false);
-            setMessages(prev => [...prev, quoteMessage]);
-            setShowQuotes(true);
-          }, 1000);
-        }, 2000);
-      }
-    }, 2000);
+    setIsTyping(false);
+    setMessages(prev => [...prev, botMessage]);
   };
 
   return (
