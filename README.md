@@ -23,23 +23,23 @@ VITE_LLM_MODEL_NAME=your_model_name
 VITE_LLM_API_VERSION=your_api_version
 
 # Azure SQL Database
-VITE_AZURE_SQL_SERVER=your_server.database.windows.net
-VITE_AZURE_SQL_DATABASE=your_database_name
-VITE_AZURE_SQL_USERNAME=your_username
-VITE_AZURE_SQL_PASSWORD=your_password
+AZURE_SQL_SERVER=db.database.windows.net
+AZURE_SQL_DATABASE=PolicyPalDB
+AZURE_SQL_USERNAME=admin001
+AZURE_SQL_PASSWORD=admin231
 ```
 
 ## Database Setup
 
 1. Create an Azure SQL Database
-2. Run the schema creation script: `azure-sql/schema/create_insurance_products_schema.sql`
+2. Run the complete setup script: `azure-sql/setup-database.sql`
 3. This will create tables and insert 35 diversified insurance products
 
 ## Installation
 
 ```bash
 npm install
-npm run dev
+npm run dev:full
 ```
 
 ## Deployment

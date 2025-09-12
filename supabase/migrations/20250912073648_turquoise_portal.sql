@@ -1,104 +1,96 @@
 /*
-  # Insurance Products Database Schema
+  # PolicyPal Insurance Database Setup
   
-  1. New Tables
-    - `insurance_products` - Store 35 diversified insurance products
-    - `customers` - Store all customer lead form data
-    - `customer_conversations` - Store chat conversation history
+  Complete database schema for Azure SQL Database with:
+  - 35 diversified insurance products
+  - Customer data tables
+  - Conversation history tracking
+  - Data validation and constraints
   
-  2. Product Coverage
-    - 5 product types: savings plans, auto insurance, home insurance, health insurance, term life insurance
-    - All gender categories: male, female, non-binary
-    - All age groups: 18-25, 26-35, 36-45, 46-55, 56-65, 65+
-    - Realistic premium variations
-  
-  3. Data Validation
-    - Strict data type enforcement
-    - Required field constraints
-    - Format validations
+  Run this single file to set up your entire database.
 */
 
 -- Insurance Products Table
 CREATE TABLE insurance_products (
-  product_id SERIAL PRIMARY KEY,
-  product_name VARCHAR(100) NOT NULL,
-  product_type VARCHAR(20) NOT NULL CHECK (product_type IN ('savings', 'auto', 'home', 'health', 'term_life')),
-  target_gender VARCHAR(10) NOT NULL CHECK (target_gender IN ('male', 'female', 'non_binary', 'all')),
-  min_age INTEGER NOT NULL CHECK (min_age >= 18 AND min_age <= 65),
-  max_age INTEGER NOT NULL CHECK (max_age >= min_age AND max_age <= 80),
+  product_id INT IDENTITY(1,1) PRIMARY KEY,
+  product_name NVARCHAR(100) NOT NULL,
+  product_type NVARCHAR(20) NOT NULL CHECK (product_type IN ('savings', 'auto', 'home', 'health', 'term_life')),
+  target_gender NVARCHAR(10) NOT NULL CHECK (target_gender IN ('male', 'female', 'non_binary', 'all')),
+  min_age INT NOT NULL CHECK (min_age >= 18 AND min_age <= 65),
+  max_age INT NOT NULL CHECK (max_age >= min_age AND max_age <= 80),
   premium_amount DECIMAL(10,2) NOT NULL CHECK (premium_amount > 0),
-  coverage_details TEXT NOT NULL,
-  provider_name VARCHAR(50) NOT NULL,
-  features JSONB DEFAULT '{}',
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  coverage_details NVARCHAR(MAX) NOT NULL,
+  provider_name NVARCHAR(50) NOT NULL,
+  features NVARCHAR(MAX) DEFAULT '{}',
+  is_active BIT DEFAULT 1,
+  created_at DATETIME2 DEFAULT GETDATE(),
+  updated_at DATETIME2 DEFAULT GETDATE()
 );
 
 -- Customers Table (Lead Form Data)
 CREATE TABLE customers (
-  customer_id SERIAL PRIMARY KEY,
+  customer_id INT IDENTITY(1,1) PRIMARY KEY,
   
   -- Basic Information
-  name VARCHAR(100) NOT NULL CHECK (LENGTH(TRIM(name)) > 0),
-  email VARCHAR(255) NOT NULL CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
-  phone VARCHAR(15) NOT NULL CHECK (phone ~ '^[0-9+\-\s()]{10,15}$'),
-  zip_code VARCHAR(10) NOT NULL CHECK (LENGTH(TRIM(zip_code)) >= 5),
+  name NVARCHAR(100) NOT NULL CHECK (LEN(TRIM(name)) > 0),
+  email NVARCHAR(255) NOT NULL CHECK (email LIKE '%_@_%._%'),
+  phone NVARCHAR(15) NOT NULL CHECK (LEN(phone) >= 10),
+  zip_code NVARCHAR(10) NOT NULL CHECK (LEN(TRIM(zip_code)) >= 5),
   
   -- Insurance Selection
-  insurance_type VARCHAR(20) NOT NULL CHECK (insurance_type IN ('savings', 'auto', 'home', 'health', 'term_life')),
+  insurance_type NVARCHAR(20) NOT NULL CHECK (insurance_type IN ('savings', 'auto', 'home', 'health', 'term_life')),
   
   -- Demographics (for health, term_life, savings)
-  age INTEGER CHECK (age >= 18 AND age <= 80),
-  gender VARCHAR(10) CHECK (gender IN ('male', 'female', 'non_binary')),
+  age INT CHECK (age >= 18 AND age <= 80),
+  gender NVARCHAR(10) CHECK (gender IN ('male', 'female', 'non_binary')),
   
   -- Auto Insurance Specific
-  vehicle_number VARCHAR(20) CHECK (vehicle_number IS NULL OR LENGTH(TRIM(vehicle_number)) > 0),
-  vehicle_model VARCHAR(50) CHECK (vehicle_model IS NULL OR LENGTH(TRIM(vehicle_model)) > 0),
-  vehicle_year INTEGER CHECK (vehicle_year IS NULL OR (vehicle_year >= 1990 AND vehicle_year <= EXTRACT(YEAR FROM NOW()) + 1)),
+  vehicle_number NVARCHAR(20) CHECK (vehicle_number IS NULL OR LEN(TRIM(vehicle_number)) > 0),
+  vehicle_model NVARCHAR(50) CHECK (vehicle_model IS NULL OR LEN(TRIM(vehicle_model)) > 0),
+  vehicle_year INT CHECK (vehicle_year IS NULL OR (vehicle_year >= 1990 AND vehicle_year <= YEAR(GETDATE()) + 1)),
   
   -- Health Insurance Specific
-  medical_history TEXT,
+  medical_history NVARCHAR(MAX),
   
   -- Term Life Insurance Specific
-  coverage_amount VARCHAR(20) CHECK (coverage_amount IS NULL OR LENGTH(TRIM(coverage_amount)) > 0),
-  relationship VARCHAR(20) CHECK (relationship IS NULL OR relationship IN ('self', 'spouse', 'parents', 'child')),
+  coverage_amount NVARCHAR(20) CHECK (coverage_amount IS NULL OR LEN(TRIM(coverage_amount)) > 0),
+  relationship NVARCHAR(20) CHECK (relationship IS NULL OR relationship IN ('self', 'spouse', 'parents', 'child')),
   
   -- Savings Plan Specific
-  monthly_investment VARCHAR(20) CHECK (monthly_investment IS NULL OR LENGTH(TRIM(monthly_investment)) > 0),
-  investment_goal VARCHAR(50) CHECK (investment_goal IS NULL OR LENGTH(TRIM(investment_goal)) > 0),
+  monthly_investment NVARCHAR(20) CHECK (monthly_investment IS NULL OR LEN(TRIM(monthly_investment)) > 0),
+  investment_goal NVARCHAR(50) CHECK (investment_goal IS NULL OR LEN(TRIM(investment_goal)) > 0),
   
   -- Optional
-  current_provider VARCHAR(100),
+  current_provider NVARCHAR(100),
   
   -- System Fields
-  status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'quoted', 'converted', 'inactive')),
-  lead_source VARCHAR(50) DEFAULT 'website',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  status NVARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'quoted', 'converted', 'inactive')),
+  lead_source NVARCHAR(50) DEFAULT 'website',
+  created_at DATETIME2 DEFAULT GETDATE(),
+  updated_at DATETIME2 DEFAULT GETDATE()
 );
 
 -- Customer Conversations Table
 CREATE TABLE customer_conversations (
-  conversation_id SERIAL PRIMARY KEY,
-  customer_id INTEGER NOT NULL REFERENCES customers(customer_id) ON DELETE CASCADE,
-  session_id VARCHAR(100) NOT NULL,
-  messages JSONB NOT NULL DEFAULT '[]',
-  conversation_status VARCHAR(20) DEFAULT 'active' CHECK (conversation_status IN ('active', 'completed', 'abandoned')),
-  started_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  ended_at TIMESTAMP WITH TIME ZONE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  conversation_id INT IDENTITY(1,1) PRIMARY KEY,
+  customer_id INT NOT NULL REFERENCES customers(customer_id) ON DELETE CASCADE,
+  session_id NVARCHAR(100) NOT NULL,
+  messages NVARCHAR(MAX) NOT NULL DEFAULT '[]',
+  conversation_status NVARCHAR(20) DEFAULT 'active' CHECK (conversation_status IN ('active', 'completed', 'abandoned')),
+  started_at DATETIME2 DEFAULT GETDATE(),
+  ended_at DATETIME2,
+  created_at DATETIME2 DEFAULT GETDATE(),
+  updated_at DATETIME2 DEFAULT GETDATE()
 );
 
 -- Indexes for Performance
-CREATE INDEX idx_insurance_products_type ON insurance_products(product_type);
-CREATE INDEX idx_insurance_products_gender_age ON insurance_products(target_gender, min_age, max_age);
-CREATE INDEX idx_customers_email ON customers(email);
-CREATE INDEX idx_customers_insurance_type ON customers(insurance_type);
-CREATE INDEX idx_customers_created_at ON customers(created_at);
-CREATE INDEX idx_customer_conversations_customer_id ON customer_conversations(customer_id);
-CREATE INDEX idx_customer_conversations_session_id ON customer_conversations(session_id);
+CREATE INDEX IX_insurance_products_type ON insurance_products(product_type);
+CREATE INDEX IX_insurance_products_gender_age ON insurance_products(target_gender, min_age, max_age);
+CREATE INDEX IX_customers_email ON customers(email);
+CREATE INDEX IX_customers_insurance_type ON customers(insurance_type);
+CREATE INDEX IX_customers_created_at ON customers(created_at);
+CREATE INDEX IX_customer_conversations_customer_id ON customer_conversations(customer_id);
+CREATE INDEX IX_customer_conversations_session_id ON customer_conversations(session_id);
 
 -- Insert 35 Diversified Insurance Products
 
@@ -148,96 +140,30 @@ INSERT INTO insurance_products (product_name, product_type, target_gender, min_a
 ('High Net Worth Term', 'term_life', 'all', 30, 60, 35000.00, 'Premium term insurance for high net worth individuals with estate planning', 'Bajaj Allianz', '{"estate_planning": true, "tax_benefits": true, "wealth_transfer": true}'),
 ('Joint Life Term Plan', 'term_life', 'all', 25, 65, 18000.00, 'Joint life term insurance for couples with survivor benefits', 'Tata AIA', '{"joint_life": true, "survivor_benefit": true, "premium_sharing": true}');
 
--- Data Validation Function
-CREATE OR REPLACE FUNCTION validate_customer_data()
-RETURNS TRIGGER AS $$
+-- Create trigger for updating updated_at timestamp
+CREATE TRIGGER tr_customers_updated_at
+ON customers
+AFTER UPDATE
+AS
 BEGIN
-  -- Validate insurance type specific fields
-  IF NEW.insurance_type = 'auto' THEN
-    IF NEW.vehicle_number IS NULL OR NEW.vehicle_model IS NULL OR NEW.vehicle_year IS NULL THEN
-      RAISE EXCEPTION 'Auto insurance requires vehicle_number, vehicle_model, and vehicle_year';
-    END IF;
-  END IF;
-  
-  IF NEW.insurance_type IN ('health', 'term_life', 'savings') THEN
-    IF NEW.age IS NULL OR NEW.gender IS NULL THEN
-      RAISE EXCEPTION 'Health, term life, and savings insurance require age and gender';
-    END IF;
-  END IF;
-  
-  IF NEW.insurance_type = 'term_life' THEN
-    IF NEW.coverage_amount IS NULL OR NEW.relationship IS NULL THEN
-      RAISE EXCEPTION 'Term life insurance requires coverage_amount and relationship';
-    END IF;
-  END IF;
-  
-  IF NEW.insurance_type = 'savings' THEN
-    IF NEW.monthly_investment IS NULL OR NEW.investment_goal IS NULL THEN
-      RAISE EXCEPTION 'Savings plans require monthly_investment and investment_goal';
-    END IF;
-  END IF;
-  
-  -- Validate email format
-  IF NEW.email !~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$' THEN
-    RAISE EXCEPTION 'Invalid email format: %', NEW.email;
-  END IF;
-  
-  -- Validate phone format
-  IF NEW.phone !~ '^[0-9+\-\s()]{10,15}$' THEN
-    RAISE EXCEPTION 'Invalid phone format: %', NEW.phone;
-  END IF;
-  
-  -- Set updated_at timestamp
-  NEW.updated_at = NOW();
-  
-  RETURN NEW;
+    UPDATE customers 
+    SET updated_at = GETDATE()
+    FROM customers c
+    INNER JOIN inserted i ON c.customer_id = i.customer_id;
 END;
-$$ LANGUAGE plpgsql;
 
--- Create trigger for validation
-CREATE TRIGGER validate_customer_data_trigger
-  BEFORE INSERT OR UPDATE ON customers
-  FOR EACH ROW
-  EXECUTE FUNCTION validate_customer_data();
+CREATE TRIGGER tr_conversations_updated_at
+ON customer_conversations
+AFTER UPDATE
+AS
+BEGIN
+    UPDATE customer_conversations 
+    SET updated_at = GETDATE()
+    FROM customer_conversations c
+    INNER JOIN inserted i ON c.conversation_id = i.conversation_id;
+END;
 
--- Enable Row Level Security
-ALTER TABLE insurance_products ENABLE ROW LEVEL SECURITY;
-ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE customer_conversations ENABLE ROW LEVEL SECURITY;
-
--- Policies for public access (adjust based on your security requirements)
-CREATE POLICY "Anyone can read active insurance products"
-  ON insurance_products
-  FOR SELECT
-  TO public
-  USING (is_active = true);
-
-CREATE POLICY "Anyone can insert customer data"
-  ON customers
-  FOR INSERT
-  TO public
-  WITH CHECK (true);
-
-CREATE POLICY "Anyone can read their own customer data"
-  ON customers
-  FOR SELECT
-  TO public
-  USING (true);
-
-CREATE POLICY "Anyone can insert conversation data"
-  ON customer_conversations
-  FOR INSERT
-  TO public
-  WITH CHECK (true);
-
-CREATE POLICY "Anyone can update conversation data"
-  ON customer_conversations
-  FOR UPDATE
-  TO public
-  USING (true);
-
-CREATE POLICY "Anyone can read conversation data"
-  ON customer_conversations
-  FOR SELECT
-  TO public
-  USING (true);
+-- Verification queries (run these to confirm setup)
+-- SELECT COUNT(*) as total_products FROM insurance_products;
+-- SELECT product_type, COUNT(*) as count FROM insurance_products GROUP BY product_type;
+-- SELECT * FROM insurance_products WHERE product_type = 'auto';
