@@ -27,12 +27,19 @@ app.post('/api/database/products', async (req, res) => {
 // Store customer data
 app.post('/api/database/customer', async (req, res) => {
   try {
+    console.log('Received customer data request:', req.body);
     const { customerData } = req.body;
+    
+    if (!customerData) {
+      return res.status(400).json({ success: false, error: 'Customer data is required' });
+    }
+    
     const customerId = await DatabaseService.storeCustomer(customerData);
+    console.log('Customer stored with ID:', customerId);
     res.json({ success: true, data: { customerId } });
   } catch (error) {
     console.error('Customer API error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: error.message || 'Failed to store customer data' });
   }
 });
 

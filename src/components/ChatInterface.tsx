@@ -303,11 +303,11 @@ Start the conversation by greeting them personally and acknowledging their speci
       } catch (error) {
         console.error('Error initializing chat:', error);
         
-        // Fallback initialization
+        // Fallback initialization with more detailed error message
         const fallbackMessage: Message = {
           id: '1',
           type: 'bot',
-          content: `Hello ${formData.name}! 👋 I'm PolicyPal, your personal insurance advisor. I'm here to help you find the perfect ${formData.insuranceType} insurance coverage. I'm having trouble accessing our product database right now, but I can still help answer your questions!`,
+          content: `Hello ${formData.name}! 👋 I'm PolicyPal, your personal insurance advisor. I'm currently having trouble connecting to our database system. Please ensure the backend server is running and the database is accessible. You can try refreshing the page or contact support if the issue persists.`,
           timestamp: new Date(),
         };
         setMessages([fallbackMessage]);

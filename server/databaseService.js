@@ -146,9 +146,17 @@ export class DatabaseService {
       });
 
       const result = await request.query(query);
-      return result.recordset[0]?.customer_id || null;
+      const customerId = result.recordset[0]?.customer_id;
+      console.log('Customer stored successfully with ID:', customerId);
+      return customerId || null;
     } catch (error) {
-      console.error('Database error:', error);
+      console.error('Database error in storeCustomer:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        state: error.state,
+        severity: error.severity
+      });
       throw error;
     }
   }
