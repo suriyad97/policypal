@@ -23,10 +23,10 @@ VITE_LLM_MODEL_NAME=your_model_name
 VITE_LLM_API_VERSION=your_api_version
 
 # Azure SQL Database
-AZURE_SQL_SERVER=db.database.windows.net
-AZURE_SQL_DATABASE=PolicyPalDB
-AZURE_SQL_USERNAME=admin001
-AZURE_SQL_PASSWORD=admin231
+AZURE_SQL_SERVER=tcp:ml-lms-db.database.windows.net
+AZURE_SQL_DATABASE=lms-db
+AZURE_SQL_USERNAME=lmsadmin-001
+AZURE_SQL_PASSWORD=Creative@2025
 ```
 
 ## Database Setup
