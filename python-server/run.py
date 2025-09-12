@@ -1,28 +1,16 @@
 #!/usr/bin/env python3
-"""
-PolicyPal Python Backend Server
-Run this script to start the FastAPI server
-"""
-
+import uvicorn
 import os
 import sys
-from pathlib import Path
 
 # Add the current directory to Python path
-current_dir = Path(__file__).parent
-sys.path.insert(0, str(current_dir))
-
-# Load environment variables
-from dotenv import load_dotenv
-load_dotenv(current_dir.parent / '.env')
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 if __name__ == "__main__":
-    import uvicorn
-    
-    print("🚀 Starting PolicyPal Python Backend Server...")
-    print(f"📊 Database: {os.getenv('AZURE_SQL_DATABASE', 'lms-db')}")
-    print(f"🌐 Server: http://localhost:5000")
-    print(f"📖 API Docs: http://localhost:5000/docs")
+    print("Starting PolicyPal Python Backend Server...")
+    print("Server will be available at: http://localhost:5000")
+    print("API Documentation: http://localhost:5000/docs")
+    print("Health Check: http://localhost:5000/api/health")
     
     uvicorn.run(
         "main:app",
