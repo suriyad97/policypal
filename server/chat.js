@@ -256,5 +256,7 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Chat server running on port ${PORT}`);
+  console.log(`🚀 PolicyPal Chat Server running on port ${PORT}`);
+  console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`🔗 Frontend proxy: /api -> http://localhost:${PORT}`);
 });
