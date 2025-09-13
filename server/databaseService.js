@@ -2,13 +2,16 @@ import sql from 'mssql';
 
 // Azure SQL Database configuration
 const dbConfig = {
-  server: process.env.AZURE_SQL_SERVER,
-  database: process.env.AZURE_SQL_DATABASE,
-  user: process.env.AZURE_SQL_USERNAME,
-  password: process.env.AZURE_SQL_PASSWORD,
+  server: process.env.AZURE_SQL_SERVER || 'tcp:ml-lms-db.database.windows.net',
+  database: process.env.AZURE_SQL_DATABASE || 'lms-db',
+  user: process.env.AZURE_SQL_USERNAME || 'lmsadmin-001',
+  password: process.env.AZURE_SQL_PASSWORD || 'Creative@2025',
   options: {
-    encrypt: true, // Use encryption
-    trustServerCertificate: false // For Azure SQL
+    encrypt: true, // Use encryption for Azure SQL
+    trustServerCertificate: false, // For Azure SQL
+    enableArithAbort: true,
+    requestTimeout: 30000,
+    connectionTimeout: 30000
   },
   pool: {
     max: 10,
@@ -22,110 +25,123 @@ let pool = null;
 
 async function getConnection() {
   if (!pool) {
-    pool = new sql.ConnectionPool(dbConfig);
-    await pool.connect();
+    try {
+      pool = new sql.ConnectionPool(dbConfig);
+      await pool.connect();
+      console.log('✅ Connected to Azure SQL Database');
+    } catch (error) {
+      console.error('❌ Database connection failed:', error.message);
+      throw error;
+    }
   }
   return pool;
 }
 
-// Database service functions
+// Database service class
 export class DatabaseService {
   
   /**
+   * Test database connection
+   */
+  async testConnection() {
+    try {
+      const connection = await getConnection();
+      const result = await connection.request().query('SELECT 1 as test');
+      return result.recordset.length > 0;
+    } catch (error) {
+      console.error('Database connection test failed:', error);
+      return false;
+    }
+  }
+
+  /**
    * Get insurance products filtered by type, age, and gender
    */
-  static async getInsuranceProducts(productType, age, gender) {
+  async getInsuranceProducts(productType, age, gender) {
     try {
       const connection = await getConnection();
       const request = connection.request();
       
       let query = `
-        SELECT * FROM insurance_products 
-        WHERE product_type = @productType AND is_active = 1
+        SELECT 
+          product_id,
+          product_name,
+          product_type,
+          target_gender,
+          min_age,
+          max_age,
+          premium_amount,
+          coverage_details,
+          provider_name,
+          features,
+          is_active,
+          created_at,
+          updated_at
+        FROM insurance_products 
+        WHERE is_active = 1
       `;
       
-      request.input('productType', sql.NVarChar, productType);
-
-      // Filter by age if provided
-      if (age) {
-        query += ` AND min_age <= @age AND max_age >= @age`;
-        request.input('age', sql.Int, age);
+      // Add filters
+      if (productType) {
+        query += ` AND product_type = @productType`;
+        request.input('productType', sql.NVarChar, productType);
       }
 
-      // Filter by gender if provided
+      if (age) {
+        query += ` AND min_age <= @age AND max_age >= @age`;
+        request.input('age', sql.Int, parseInt(age));
+      }
+
       if (gender) {
         query += ` AND (target_gender = @gender OR target_gender = 'all')`;
-        request.input('gender', sql.NVarChar, gender);
+        request.input('gender', sql.NVarChar, gender.toLowerCase());
       }
 
       query += ` ORDER BY premium_amount ASC`;
 
+      console.log('Executing query:', query);
       const result = await request.query(query);
-      return result.recordset || [];
+      
+      // Parse JSON fields if they exist
+      const products = result.recordset.map(product => {
+        if (product.features) {
+          try {
+            product.features = JSON.parse(product.features);
+          } catch (e) {
+            product.features = {};
+          }
+        }
+        return product;
+      });
+
+      console.log(`Found ${products.length} products`);
+      return products;
     } catch (error) {
-      console.error('Database error:', error);
-      return [];
+      console.error('Database error in getInsuranceProducts:', error);
+      throw error;
     }
   }
 
   /**
-   * Store customer data with validation
+   * Store customer data with validation and field mapping
    */
-  static async storeCustomer(customerData) {
+  async storeCustomer(customerData) {
     try {
-      // Validate required fields based on insurance type
+      console.log('Storing customer data:', customerData);
+      
+      // Validate required fields
       this.validateCustomerData(customerData);
 
       const connection = await getConnection();
       const request = connection.request();
 
-      // Format data according to database schema
-      const formattedData = {
-        name: customerData.name?.trim(),
-        email: customerData.email?.toLowerCase().trim(),
-        phone: customerData.phone?.trim(),
-        zip_code: customerData.zipCode?.trim(),
-        insurance_type: customerData.insuranceType,
-        current_provider: customerData.currentProvider?.trim() || null,
-        lead_source: 'website'
-      };
+      // Map frontend fields to database fields
+      const mappedData = this.mapCustomerFields(customerData);
+      
+      console.log('Mapped customer data:', mappedData);
 
-      // Add type-specific fields
-      switch (customerData.insuranceType) {
-        case 'auto':
-          formattedData.vehicle_number = customerData.vehicleNumber?.trim();
-          formattedData.vehicle_model = customerData.vehicleModel?.trim();
-          formattedData.vehicle_year = parseInt(customerData.vehicleYear);
-          break;
-          
-        case 'health':
-          formattedData.age = parseInt(customerData.age) || null;
-          formattedData.gender = customerData.gender;
-          formattedData.medical_history = customerData.medicalHistory?.trim() || null;
-          break;
-          
-        case 'term_life':
-          formattedData.age = parseInt(customerData.lifeAge || customerData.age) || null;
-          formattedData.gender = customerData.lifeGender || customerData.gender;
-          formattedData.coverage_amount = customerData.coverageAmount?.trim();
-          formattedData.relationship = customerData.relationship;
-          break;
-          
-        case 'savings':
-          formattedData.age = parseInt(customerData.savingsAge || customerData.age) || null;
-          formattedData.gender = customerData.savingsGender || customerData.gender;
-          formattedData.monthly_investment = customerData.monthlyInvestment?.trim();
-          formattedData.investment_goal = customerData.investmentGoal?.trim();
-          break;
-          
-        case 'home':
-          formattedData.age = parseInt(customerData.age) || null;
-          formattedData.gender = customerData.gender;
-          break;
-      }
-
-      // Build INSERT query
-      const columns = Object.keys(formattedData).filter(key => formattedData[key] !== undefined);
+      // Build dynamic INSERT query
+      const columns = Object.keys(mappedData).filter(key => mappedData[key] !== undefined && mappedData[key] !== null);
       const values = columns.map(col => `@${col}`).join(', ');
       const columnNames = columns.join(', ');
 
@@ -137,34 +153,115 @@ export class DatabaseService {
 
       // Add parameters
       columns.forEach(col => {
-        const value = formattedData[col];
+        const value = mappedData[col];
         if (typeof value === 'number') {
           request.input(col, sql.Int, value);
-        } else {
+        } else if (typeof value === 'string') {
           request.input(col, sql.NVarChar, value);
+        } else {
+          request.input(col, sql.NVarChar, String(value));
         }
       });
 
+      console.log('Executing customer insert query:', query);
       const result = await request.query(query);
       const customerId = result.recordset[0]?.customer_id;
-      console.log('Customer stored successfully with ID:', customerId);
-      return customerId || null;
+      
+      if (!customerId) {
+        throw new Error('Failed to get customer ID from insert operation');
+      }
+      
+      console.log('✅ Customer stored successfully with ID:', customerId);
+      return customerId;
     } catch (error) {
-      console.error('Database error in storeCustomer:', error);
-      console.error('Error details:', {
-        message: error.message,
-        code: error.code,
-        state: error.state,
-        severity: error.severity
-      });
+      console.error('❌ Database error in storeCustomer:', error);
       throw error;
     }
   }
 
   /**
+   * Map frontend field names to database field names
+   */
+  mapCustomerFields(customerData) {
+    const mapped = {
+      name: customerData.name?.trim(),
+      email: customerData.email?.toLowerCase().trim(),
+      phone: customerData.phone?.trim(),
+      zip_code: customerData.zipCode?.trim(),
+      insurance_type: this.mapInsuranceType(customerData.insuranceType),
+      current_provider: customerData.currentProvider?.trim() || null,
+      lead_source: 'website'
+    };
+
+    // Add demographics
+    if (customerData.age) {
+      mapped.age = parseInt(customerData.age);
+    }
+    if (customerData.lifeAge) {
+      mapped.age = parseInt(customerData.lifeAge);
+    }
+    if (customerData.savingsAge) {
+      mapped.age = parseInt(customerData.savingsAge);
+    }
+
+    if (customerData.gender) {
+      mapped.gender = customerData.gender.toLowerCase();
+    }
+    if (customerData.lifeGender) {
+      mapped.gender = customerData.lifeGender.toLowerCase();
+    }
+    if (customerData.savingsGender) {
+      mapped.gender = customerData.savingsGender.toLowerCase();
+    }
+
+    // Add insurance-specific fields
+    const insuranceType = mapped.insurance_type;
+    
+    if (insuranceType === 'auto') {
+      mapped.vehicle_number = customerData.vehicleNumber?.trim();
+      mapped.vehicle_model = customerData.vehicleModel?.trim();
+      if (customerData.vehicleYear) {
+        mapped.vehicle_year = parseInt(customerData.vehicleYear);
+      }
+    }
+    
+    if (insuranceType === 'health') {
+      mapped.medical_history = customerData.medicalHistory?.trim() || null;
+    }
+    
+    if (insuranceType === 'term_life') {
+      mapped.coverage_amount = customerData.coverageAmount?.trim();
+      mapped.relationship = customerData.relationship;
+    }
+    
+    if (insuranceType === 'savings') {
+      mapped.monthly_investment = customerData.monthlyInvestment?.trim();
+      mapped.investment_goal = customerData.investmentGoal?.trim();
+    }
+
+    return mapped;
+  }
+
+  /**
+   * Map frontend insurance types to database values
+   */
+  mapInsuranceType(frontendType) {
+    const mapping = {
+      'car': 'auto',
+      'term': 'term_life',
+      'auto': 'auto',
+      'health': 'health',
+      'term_life': 'term_life',
+      'savings': 'savings',
+      'home': 'home'
+    };
+    return mapping[frontendType?.toLowerCase()] || frontendType?.toLowerCase();
+  }
+
+  /**
    * Validate customer data based on insurance type
    */
-  static validateCustomerData(customerData) {
+  validateCustomerData(customerData) {
     // Basic validation
     if (!customerData.name?.trim()) {
       throw new Error('Name is required');
@@ -188,64 +285,80 @@ export class DatabaseService {
       throw new Error('Invalid email format');
     }
 
-    // Phone format validation (basic)
-    if (customerData.phone.length < 10) {
+    // Phone format validation
+    if (customerData.phone.replace(/\D/g, '').length < 10) {
       throw new Error('Phone number must be at least 10 digits');
     }
 
     // Type-specific validation
-    switch (customerData.insuranceType) {
-      case 'auto':
-        if (!customerData.vehicleNumber?.trim()) {
-          throw new Error('Vehicle number is required for auto insurance');
+    const insuranceType = this.mapInsuranceType(customerData.insuranceType);
+    
+    if (insuranceType === 'auto') {
+      if (!customerData.vehicleNumber?.trim()) {
+        throw new Error('Vehicle number is required for auto insurance');
+      }
+      if (!customerData.vehicleModel?.trim()) {
+        throw new Error('Vehicle model is required for auto insurance');
+      }
+      if (!customerData.vehicleYear || isNaN(parseInt(customerData.vehicleYear))) {
+        throw new Error('Valid vehicle year is required for auto insurance');
+      }
+    }
+    
+    if (['health', 'term_life', 'savings', 'home'].includes(insuranceType)) {
+      const age = parseInt(customerData.age || customerData.lifeAge || customerData.savingsAge);
+      const gender = customerData.gender || customerData.lifeGender || customerData.savingsGender;
+      
+      if (!age || isNaN(age) || age < 18 || age > 80) {
+        throw new Error('Valid age between 18 and 80 is required');
+      }
+      if (!gender) {
+        throw new Error('Gender is required');
+      }
+      
+      if (insuranceType === 'term_life') {
+        if (!customerData.coverageAmount?.trim()) {
+          throw new Error('Coverage amount is required for term life insurance');
         }
-        if (!customerData.vehicleModel?.trim()) {
-          throw new Error('Vehicle model is required for auto insurance');
+        if (!customerData.relationship) {
+          throw new Error('Relationship is required for term life insurance');
         }
-        if (!customerData.vehicleYear || isNaN(parseInt(customerData.vehicleYear))) {
-          throw new Error('Valid vehicle year is required for auto insurance');
+      }
+      
+      if (insuranceType === 'savings') {
+        if (!customerData.monthlyInvestment?.trim()) {
+          throw new Error('Monthly investment is required for savings plans');
         }
-        break;
-        
-      case 'health':
-      case 'term_life':
-      case 'savings':
-      case 'home':
-        const ageField = parseInt(customerData.lifeAge || customerData.savingsAge || customerData.age);
-        const genderField = customerData.lifeGender || customerData.savingsGender || customerData.gender;
-        
-        if (!ageField || isNaN(ageField) || ageField < 18 || ageField > 80) {
-          throw new Error('Valid age between 18 and 80 is required');
+        if (!customerData.investmentGoal?.trim()) {
+          throw new Error('Investment goal is required for savings plans');
         }
-        if (!genderField) {
-          throw new Error('Gender is required');
-        }
-        
-        if (customerData.insuranceType === 'term_life') {
-          if (!customerData.coverageAmount?.trim()) {
-            throw new Error('Coverage amount is required for term life insurance');
-          }
-          if (!customerData.relationship) {
-            throw new Error('Relationship is required for term life insurance');
-          }
-        }
-        
-        if (customerData.insuranceType === 'savings') {
-          if (!customerData.monthlyInvestment?.trim()) {
-            throw new Error('Monthly investment is required for savings plans');
-          }
-          if (!customerData.investmentGoal?.trim()) {
-            throw new Error('Investment goal is required for savings plans');
-          }
-        }
-        break;
+      }
+    }
+  }
+
+  /**
+   * Get customer by ID
+   */
+  async getCustomer(customerId) {
+    try {
+      const connection = await getConnection();
+      const request = connection.request();
+
+      const query = `SELECT * FROM customers WHERE customer_id = @customerId`;
+      request.input('customerId', sql.Int, customerId);
+
+      const result = await request.query(query);
+      return result.recordset[0] || null;
+    } catch (error) {
+      console.error('Database error in getCustomer:', error);
+      throw error;
     }
   }
 
   /**
    * Create conversation history record
    */
-  static async createConversationHistory(customerId, sessionId) {
+  async createConversationHistory(customerId, sessionId) {
     try {
       const connection = await getConnection();
       const request = connection.request();
@@ -264,7 +377,7 @@ export class DatabaseService {
       const result = await request.query(query);
       return result.recordset[0]?.conversation_id || null;
     } catch (error) {
-      console.error('Database error:', error);
+      console.error('Database error in createConversationHistory:', error);
       return null;
     }
   }
@@ -272,14 +385,14 @@ export class DatabaseService {
   /**
    * Update conversation history with new messages
    */
-  static async updateConversationHistory(conversationId, messages) {
+  async updateConversationHistory(conversationId, messages) {
     try {
       const connection = await getConnection();
       const request = connection.request();
 
       const query = `
         UPDATE customer_conversations 
-        SET messages = @messages
+        SET messages = @messages, updated_at = GETDATE()
         WHERE conversation_id = @conversationId
       `;
 
@@ -289,7 +402,7 @@ export class DatabaseService {
       await request.query(query);
       return true;
     } catch (error) {
-      console.error('Database error:', error);
+      console.error('Database error in updateConversationHistory:', error);
       return false;
     }
   }
@@ -297,14 +410,14 @@ export class DatabaseService {
   /**
    * End conversation
    */
-  static async endConversation(conversationId) {
+  async endConversation(conversationId) {
     try {
       const connection = await getConnection();
       const request = connection.request();
 
       const query = `
         UPDATE customer_conversations 
-        SET conversation_status = @status, ended_at = GETDATE()
+        SET conversation_status = @status, ended_at = GETDATE(), updated_at = GETDATE()
         WHERE conversation_id = @conversationId
       `;
 
@@ -314,51 +427,7 @@ export class DatabaseService {
       await request.query(query);
       return true;
     } catch (error) {
-      console.error('Database error:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Get customer by ID
-   */
-  static async getCustomer(customerId) {
-    try {
-      const connection = await getConnection();
-      const request = connection.request();
-
-      const query = `SELECT * FROM customers WHERE customer_id = @customerId`;
-      request.input('customerId', sql.Int, customerId);
-
-      const result = await request.query(query);
-      return result.recordset[0] || null;
-    } catch (error) {
-      console.error('Database error:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Update customer status
-   */
-  static async updateCustomerStatus(customerId, status) {
-    try {
-      const connection = await getConnection();
-      const request = connection.request();
-
-      const query = `
-        UPDATE customers 
-        SET status = @status
-        WHERE customer_id = @customerId
-      `;
-
-      request.input('customerId', sql.Int, customerId);
-      request.input('status', sql.NVarChar, status);
-
-      await request.query(query);
-      return true;
-    } catch (error) {
-      console.error('Database error:', error);
+      console.error('Database error in endConversation:', error);
       return false;
     }
   }
@@ -368,6 +437,15 @@ export class DatabaseService {
 process.on('SIGINT', async () => {
   if (pool) {
     await pool.close();
+    console.log('Database connection closed');
+  }
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  if (pool) {
+    await pool.close();
+    console.log('Database connection closed');
   }
   process.exit(0);
 });

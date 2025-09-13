@@ -6,11 +6,13 @@
   "scripts": {
     "dev": "vite",
     "dev:full": "concurrently \"npm run server\" \"npm run dev\"",
+    "dev:node": "concurrently \"npm run node-server\" \"npm run dev\"",
     "dev:python": "concurrently \"npm run python-server\" \"npm run dev\"",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "server": "node server/chat.js",
+    "node-server": "node server/app.js",
     "python-server": "cd python-server && python run.py"
   },
   "dependencies": {
