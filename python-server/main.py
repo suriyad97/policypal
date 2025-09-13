@@ -55,16 +55,23 @@ def _normalize_server(server: str) -> str:
         s_val = f"{s_val},1433"
     return s_val
 
-DB_CONFIG = {
-    'server': _normalize_server(os.getenv('AZURE_SQL_SERVER', 'tcp:ml-lms-db.database.windows.net')),
-    'database': os.getenv('AZURE_SQL_DATABASE', 'lms-db'),
-    'username': os.getenv('AZURE_SQL_USERNAME', 'lmsadmin-001'),
-    'password': os.getenv('AZURE_SQL_PASSWORD', 'Creative@2025'),
-    'driver': _detect_odbc_driver(),
-    'encrypt': os.getenv('AZURE_SQL_ENCRYPT', 'yes'),
-    'trust_server_certificate': os.getenv('AZURE_SQL_TRUST_SERVER_CERTIFICATE', 'no')
-}
+# Prefer configuration from environment, fall back to sensible defaults
+ENV_SERVER = os.getenv('AZURE_SQL_SERVER')
+ENV_DATABASE = os.getenv('AZURE_SQL_DATABASE')
+ENV_USERNAME = os.getenv('AZURE_SQL_USERNAME')
+ENV_PASSWORD = os.getenv('AZURE_SQL_PASSWORD')
+ENV_DRIVER = os.getenv('AZURE_SQL_DRIVER') or os.getenv('ODBC_DRIVER')
 
+DB_CONFIG = {
+    'server': _normalize_server(ENV_SERVER) if ENV_SERVER else 'tcp:localhost,1433',
+    'database': ENV_DATABASE or 'master',
+    'username': ENV_USERNAME or '',
+    'password': ENV_PASSWORD or '',
+    'driver': (_detect_odbc_driver() if not ENV_DRIVER else (ENV_DRIVER if ENV_DRIVER.startswith('{') else '{' + ENV_DRIVER + '}')),
+    'encrypt': 'Yes',
+    'trust_server_certificate': 'No',
+    'timeout': '30'
+}
 # Pydantic models
 class CustomerData(BaseModel):
     name: str
@@ -135,7 +142,8 @@ class DatabaseService:
             f"UID={DB_CONFIG['username']};"
             f"PWD={DB_CONFIG['password']};"
             f"Encrypt={DB_CONFIG['encrypt']};"
-            f"TrustServerCertificate={DB_CONFIG['trust_server_certificate']}"
+            f"TrustServerCertificate={DB_CONFIG['trust_server_certificate']};"
+            f"Connection Timeout={DB_CONFIG['timeout']};"
         )
 
     def get_connection(self):
