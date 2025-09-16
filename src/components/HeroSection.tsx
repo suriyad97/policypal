@@ -261,7 +261,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
                     </>
                   )}
                 </motion.button>
-                </div>
                 <p className="text-center text-gray-500 text-xs mt-4">
                   🔒 Your information is secure and will never be shared
                 </p>
