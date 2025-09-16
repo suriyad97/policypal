@@ -645,7 +645,7 @@ What questions do you have about ${formData.insuranceType} insurance?`,
               <div className="space-y-2">
                 <div className="flex items-center space-x-2 text-gray-600">
                   <Phone className="w-4 h-4" />
-                  <span className="text-sm">1-800-POLICY-1</span>
+                  <span className="text-sm">1800-8000-10</span>
                 </div>
                 <div className="flex items-center space-x-2 text-gray-600">
                   <Mail className="w-4 h-4" />
