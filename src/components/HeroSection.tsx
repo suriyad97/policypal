@@ -157,6 +157,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
                       className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all bg-white"
                     />
                   </div>
+                  {errors.name && (
+                    <span className="text-red-500 text-sm mt-1 block">{errors.name.message}</span>
+                  )}
+                </div>
+
                 {/* Email Field */}
                 <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -181,7 +186,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
                     <span className="text-red-500 text-sm mt-1 block">{errors.email.message}</span>
                   )}
                 </div>
-                  {errors.name && (
+
                 {/* Phone Field */}
                 <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -206,7 +211,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
                     <span className="text-red-500 text-sm mt-1 block">{errors.phone.message}</span>
                   )}
                 </div>
-                    <span className="text-red-500 text-sm mt-1 block">{errors.name.message}</span>
+
                 {/* Pincode Field */}
                 <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -231,7 +236,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
                     <span className="text-red-500 text-sm mt-1 block">{errors.pincode.message}</span>
                   )}
                 </div>
-                  )}
+
                 {/* Submit Button */}
                 <motion.button
                   type="submit"
