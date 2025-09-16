@@ -2,10 +2,10 @@ import sql from 'mssql';
 
 // Azure SQL Database configuration
 const dbConfig = {
-  server: process.env.AZURE_SQL_SERVER || 'ml-lms-db.database.windows.net',
-  database: process.env.AZURE_SQL_DATABASE || 'lms-db',
-  user: process.env.AZURE_SQL_USERNAME || 'lmsadmin-001',
-  password: process.env.AZURE_SQL_PASSWORD || 'Creative@2025',
+  server: 'ml-lms-db.database.windows.net',
+  database: 'lms-db',
+  user: 'lmsadmin-001',
+  password: 'Creative@2025',
   options: {
     encrypt: true, // Use encryption for Azure SQL
     trustServerCertificate: false, // For Azure SQL
