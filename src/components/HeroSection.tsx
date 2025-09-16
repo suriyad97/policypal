@@ -58,7 +58,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center min-h-screen">
           {/* Left Side - Hero Content */}
           <motion.div
-            className="text-center lg:text-left order-2 lg:order-1"
+            className="text-center lg:text-left"
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
@@ -123,7 +123,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
           
           {/* Right Side - Lead Form */}
           <motion.div
-            className="flex items-center justify-center order-1 lg:order-2"
+            className="flex items-center justify-center"
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
