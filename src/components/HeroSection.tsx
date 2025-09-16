@@ -89,8 +89,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
               <br />in 30 Seconds
             </h1>
             
-           
-            
             {/* Integrated Lead Form */}
             <motion.div
               className="bg-white rounded-3xl shadow-2xl p-8 border border-gray-100 max-w-2xl mx-auto"
