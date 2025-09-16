@@ -1,30 +1,30 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HeroSection } from './components/HeroSection';
-import { SimpleForm, SimpleFormData } from './components/SimpleForm';
+import { HeroSection, SimpleFormData } from './components/HeroSection';
+import { AcknowledgmentPage } from './components/AcknowledgmentPage';
 import { ChatInterface } from './components/ChatInterface';
 
-type AppState = 'hero' | 'form' | 'chat' | 'acknowledgment';
+type AppState = 'hero' | 'acknowledgment' | 'chat';
 
 function App() {
   const [currentState, setCurrentState] = useState<AppState>('hero');
   const [formData, setFormData] = useState<SimpleFormData | null>(null);
 
-  const handleGetStarted = () => {
-    setCurrentState('form');
-  };
-
-  const handleFormComplete = (data: SimpleFormData) => {
+  const handleFormSubmit = (data: SimpleFormData) => {
     setFormData(data);
     setCurrentState('acknowledgment');
   };
 
-  const handleChatRequest = (data: SimpleFormData) => {
-    setFormData(data);
+  const handleChatRequest = () => {
     setCurrentState('chat');
   };
 
-  const handleBackToHero = () => {
+  const handleDeclineChat = () => {
+    // Stay on acknowledgment page
+    console.log('User declined chat assistance');
+  };
+
+  const handleBackToHome = () => {
     setCurrentState('hero');
     setFormData(null);
   };
@@ -40,21 +40,22 @@ function App() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <HeroSection onGetStarted={handleGetStarted} />
+            <HeroSection onFormSubmit={handleFormSubmit} />
           </motion.div>
         )}
         
-        {currentState === 'form' && (
+        {currentState === 'acknowledgment' && formData && (
           <motion.div
-            key="form"
+            key="acknowledgment"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <SimpleForm 
-              onComplete={handleFormComplete} 
+            <AcknowledgmentPage 
+              formData={formData}
               onChatRequest={handleChatRequest}
+              onDeclineChat={handleDeclineChat}
             />
           </motion.div>
         )}
@@ -74,7 +75,7 @@ function App() {
                 insuranceType: 'general',
                 age: '30'
               }} 
-              onBack={handleBackToHero} 
+              onBack={handleBackToHome} 
             />
           </motion.div>
         )}
