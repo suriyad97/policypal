@@ -636,20 +636,6 @@ What questions do you have about ${formData.insuranceType} insurance?`,
               <h4 className="font-semibold text-blue-800 mb-2">Why Choose PolicyPal?</h4>
               <ul className="space-y-2 text-sm text-blue-700">
                 <li className="flex items-center space-x-2">
-                  <Star className="w-3 h-3" />
-                  <span>Compare 50+ top insurers</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <Star className="w-3 h-3" />
-                  <span>Average savings of $847/year</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <Star className="w-3 h-3" />
-                  <span>Licensed advisors</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <Star className="w-3 h-3" />
-                  <span>Free consultation</span>
                 </li>
               </ul>
             </div>
