@@ -14,7 +14,6 @@ A comprehensive insurance management system built with React, TypeScript, Python
 
 ## Environment Setup
 
-Create a `.env` file with the following variables:
 
 ```env
 # LLM Configuration
