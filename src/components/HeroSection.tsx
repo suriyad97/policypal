@@ -131,9 +131,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
             <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 border border-gray-100">
               {/* Form Header */}
               <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                  Get Your Free Quote
-                </h2>
                 <p className="text-gray-600">
                   Just a few details to get started
                 </p>
@@ -257,7 +254,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
                   ) : (
                     <>
                       <CheckCircle className="w-5 h-5" />
-                      <span>Get Free Quote</span>
+                      <span>Submit</span>
                     </>
                   )}
                 </motion.button>
