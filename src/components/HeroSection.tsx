@@ -93,33 +93,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
               Compare quotes from top insurers and save up to $847 per year
             </p>
             
-            {/* Feature Cards */}
-            <motion.div
-              className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12"
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.3 }}
-            >
-              {[
-                { icon: Clock, title: "Quick Quotes", desc: "Get quotes in 30 seconds", color: "from-blue-400 to-indigo-500" },
-                { icon: DollarSign, title: "Save Money", desc: "Average savings $847/year", color: "from-green-400 to-emerald-500" },
-                { icon: Shield, title: "Trusted", desc: "50+ top-rated insurers", color: "from-purple-400 to-indigo-500" }
-              ].map((feature, index) => (
-                <motion.div
-                  key={index}
-                  className="bg-white rounded-xl p-4 shadow-lg border border-gray-100"
-                  whileHover={{ scale: 1.05, y: -5 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                >
-                  <div className={`w-12 h-12 bg-gradient-to-r ${feature.color} rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg`}>
-                    <feature.icon className="w-6 h-6 text-white" />
-                  </div>
-                  <h3 className="text-gray-800 font-bold text-lg mb-1">{feature.title}</h3>
-                  <p className="text-gray-600 font-medium text-sm">{feature.desc}</p>
-                </motion.div>
-              ))}
-            </motion.div>
-            
             {/* Integrated Lead Form */}
             <motion.div
               className="bg-white rounded-3xl shadow-2xl p-8 border border-gray-100 max-w-2xl mx-auto"
