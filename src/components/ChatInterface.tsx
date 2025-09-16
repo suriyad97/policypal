@@ -50,6 +50,31 @@ const LLM_CONFIG = {
 // Backend API base URL
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
+// Rule-based response fallback
+const generateRuleBasedResponse = (message: string, formData: FormData): string => {
+  const messageLower = message.toLowerCase();
+  const insuranceType = formData.insuranceType;
+  const name = formData.name;
+
+  if (messageLower.includes('quote') || messageLower.includes('price') || messageLower.includes('cost')) {
+    if (insuranceType === 'auto') {
+      return `For auto insurance quotes, ${name}, I'll need some details about your vehicle. Based on your information, our auto insurance plans typically start from ₹5,000 annually. Would you like me to show you specific plans that match your needs?`;
+    } else if (insuranceType === 'health') {
+      return `Health insurance premiums vary based on age and coverage, ${name}. Our health plans start from ₹8,000 annually. Would you like to see plans suitable for your age group?`;
+    } else if (insuranceType === 'term_life') {
+      return `Term life insurance is very affordable, ${name}. Based on your profile, premiums can start from ₹6,000 annually. Shall I show you some term life options?`;
+    } else {
+      return `I can help you get a quote for ${insuranceType} insurance, ${name}. Let me find the best options for you based on your requirements.`;
+    }
+  } else if (messageLower.includes('coverage') || messageLower.includes('benefit')) {
+    return `Our ${insuranceType} insurance provides comprehensive coverage including accident protection, liability coverage, and additional benefits. Would you like me to explain the specific coverage details for your situation?`;
+  } else if (messageLower.includes('claim')) {
+    return `Our claims process is simple and fast, ${name}. You can file claims online or through our mobile app. Most ${insuranceType} claims are processed within 24-48 hours. Do you have any specific questions about the claims process?`;
+  } else {
+    return `I understand you're asking about ${insuranceType} insurance, ${name}. I'm here to help with quotes, coverage details, claims information, and any other questions. What specific aspect would you like to know more about?`;
+  }
+};
+
 // Database API functions
 const DatabaseAPI = {
   async getInsuranceProducts(productType: string, age?: number, gender?: string): Promise<InsuranceProduct[]> {
@@ -59,6 +84,11 @@ const DatabaseAPI = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productType, age, gender })
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
       const result = await response.json();
       return result.success ? result.data : [];
     } catch (error) {
@@ -74,6 +104,11 @@ const DatabaseAPI = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ customerData })
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
       const result = await response.json();
       return result.success ? result.data.customerId : null;
     } catch (error) {
@@ -85,6 +120,11 @@ const DatabaseAPI = {
   async getCustomer(customerId: number): Promise<any | null> {
     try {
       const response = await fetch(`${API_BASE_URL}/database/customer/${customerId}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
       const result = await response.json();
       return result.success ? result.data : null;
     } catch (error) {
@@ -100,6 +140,11 @@ const DatabaseAPI = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ customerId, sessionId })
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
       const result = await response.json();
       return result.success ? result.data.conversationId : null;
     } catch (error) {
@@ -115,6 +160,11 @@ const DatabaseAPI = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages })
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
       const result = await response.json();
       return result.success;
     } catch (error) {
@@ -128,6 +178,11 @@ const DatabaseAPI = {
       const response = await fetch(`${API_BASE_URL}/database/conversation/${conversationId}/end`, {
         method: 'PUT'
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
       const result = await response.json();
       return result.success;
     } catch (error) {
@@ -244,45 +299,84 @@ Start the conversation by greeting them personally and acknowledging their speci
       setIsTyping(true);
       
       try {
-        // 1. Store customer data in database first
-        const storedCustomerId = await DatabaseAPI.storeCustomer(formData);
-        if (!storedCustomerId) {
-          throw new Error('Failed to store customer data');
+        // Try to connect to backend and store customer data
+        let storedCustomerId: string | null = null;
+        let customer: any = null;
+        let products: InsuranceProduct[] = [];
+        let conversationHistoryId: number | null = null;
+        
+        try {
+          // 1. Store customer data in database
+          const customerIdResult = await DatabaseAPI.storeCustomer(formData);
+          if (customerIdResult) {
+            storedCustomerId = customerIdResult.toString();
+            setCustomerId(storedCustomerId);
+            
+            // 2. Get stored customer data for context
+            customer = await DatabaseAPI.getCustomer(customerIdResult);
+            
+            // 3. Fetch relevant insurance products from database
+            products = await DatabaseAPI.getInsuranceProducts(
+              formData.insuranceType,
+              customer?.age,
+              customer?.gender
+            );
+            setInsuranceProducts(products);
+            
+            // 4. Create conversation history record
+            const sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+            conversationHistoryId = await DatabaseAPI.createConversationHistory(
+              customerIdResult,
+              sessionId
+            );
+            setConversationId(conversationHistoryId);
+          }
+        } catch (dbError) {
+          console.warn('Database connection failed, using fallback mode:', dbError);
         }
-        setCustomerId(storedCustomerId.toString());
         
-        // 2. Get stored customer data for context
-        const customer = await DatabaseAPI.getCustomer(storedCustomerId);
-        if (!customer) {
-          throw new Error('Failed to retrieve customer data');
-        }
+        // Use form data as fallback if database is unavailable
+        const customerData = customer || {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          age: formData.age,
+          gender: formData.gender,
+          zip_code: formData.zipCode,
+          insurance_type: formData.insuranceType,
+          vehicle_model: formData.vehicleModel,
+          vehicle_year: formData.vehicleYear,
+          vehicle_number: formData.vehicleNumber,
+          medical_history: formData.medicalHistory,
+          coverage_amount: formData.coverageAmount,
+          monthly_investment: formData.monthlyInvestment,
+          investment_goal: formData.investmentGoal,
+          current_provider: formData.currentProvider
+        };
         
-        // 3. Fetch relevant insurance products from database
-        const products = await DatabaseAPI.getInsuranceProducts(
-          formData.insuranceType,
-          customer.age,
-          customer.gender
-        );
-        setInsuranceProducts(products);
+        // Generate system prompt with available data
+        const systemPrompt = generateSystemPrompt(formData, products, customerData);
         
-        // 4. Create conversation history record
-        const sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
-        const conversationHistoryId = await DatabaseAPI.createConversationHistory(
-          storedCustomerId,
-          sessionId
-        );
-        setConversationId(conversationHistoryId);
-        
-        // 5. Generate system prompt with product data and customer context
-        const systemPrompt = generateSystemPrompt(formData, products, customer);
-        
-        // 6. Initialize LLM conversation
-        const initialMessages = [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: 'Hello, I would like to get started with my insurance quote.' }
-        ];
+        // Initialize LLM conversation or use fallback
+        let response: string;
+        try {
+          const initialMessages = [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: 'Hello, I would like to get started with my insurance quote.' }
+          ];
+          response = await callLLMAPI(initialMessages);
+        } catch (llmError) {
+          console.warn('LLM API failed, using fallback response:', llmError);
+          response = `Hello ${formData.name}! 👋 I'm PolicyPal, your personal insurance advisor. I'm here to help you find the best ${formData.insuranceType} insurance options. 
 
-        const response = await callLLMAPI(initialMessages);
+I can help you with:
+• Comparing different insurance plans
+• Explaining coverage options
+• Finding the best rates for your needs
+• Answering any questions about insurance
+
+What would you like to know about ${formData.insuranceType} insurance?`;
+        }
         
         const initialMessage: Message = {
           id: '1',
@@ -293,21 +387,33 @@ Start the conversation by greeting them personally and acknowledging their speci
 
         setMessages([initialMessage]);
         
-        // 7. Store initial conversation in database
+        // Store initial conversation in database if available
         if (conversationHistoryId) {
-          await DatabaseAPI.updateConversationHistory(conversationHistoryId, [
-            { role: 'assistant', content: response, timestamp: new Date().toISOString() }
-          ]);
+          try {
+            await DatabaseAPI.updateConversationHistory(conversationHistoryId, [
+              { role: 'assistant', content: response, timestamp: new Date().toISOString() }
+            ]);
+          } catch (error) {
+            console.warn('Failed to store conversation history:', error);
+          }
         }
         
       } catch (error) {
         console.error('Error initializing chat:', error);
         
-        // Fallback initialization with more detailed error message
+        // Final fallback initialization
         const fallbackMessage: Message = {
           id: '1',
           type: 'bot',
-          content: `Hello ${formData.name}! 👋 I'm PolicyPal, your personal insurance advisor. I'm currently having trouble connecting to our database system. Please ensure the backend server is running and the database is accessible. You can try refreshing the page or contact support if the issue persists.`,
+          content: `Hello ${formData.name}! 👋 I'm PolicyPal, your personal insurance advisor. I'm here to help you with your ${formData.insuranceType} insurance needs.
+
+I can assist you with:
+• Getting quotes and comparing plans
+• Explaining different coverage options
+• Understanding insurance terms
+• Finding the best rates for your situation
+
+What questions do you have about ${formData.insuranceType} insurance?`,
           timestamp: new Date(),
         };
         setMessages([fallbackMessage]);
@@ -335,52 +441,85 @@ Start the conversation by greeting them personally and acknowledging their speci
     setIsTyping(true);
 
     try {
-      // Get customer data for context
-      const customer = customerId ? await DatabaseAPI.getCustomer(parseInt(customerId)) : null;
-      if (!customer) {
-        throw new Error('Customer data not found');
+      // Get customer data for context or use form data as fallback
+      let customer: any = null;
+      if (customerId) {
+        try {
+          customer = await DatabaseAPI.getCustomer(parseInt(customerId));
+        } catch (error) {
+          console.warn('Failed to get customer from database:', error);
+        }
       }
+      
+      // Use form data as fallback
+      const customerData = customer || {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        age: formData.age,
+        gender: formData.gender,
+        zip_code: formData.zipCode,
+        insurance_type: formData.insuranceType,
+        vehicle_model: formData.vehicleModel,
+        vehicle_year: formData.vehicleYear,
+        vehicle_number: formData.vehicleNumber,
+        medical_history: formData.medicalHistory,
+        coverage_amount: formData.coverageAmount,
+        monthly_investment: formData.monthlyInvestment,
+        investment_goal: formData.investmentGoal,
+        current_provider: formData.currentProvider
+      };
 
       // Build conversation history for LLM
-      const systemPrompt = generateSystemPrompt(formData, insuranceProducts, customer);
-    const conversationHistory = [
-      { role: 'system', content: systemPrompt },
-      ...messages.map(msg => ({
-        role: msg.type === 'user' ? 'user' : 'assistant',
-        content: msg.content
-      })),
-      { role: 'user', content: currentInput }
-    ];
+      const systemPrompt = generateSystemPrompt(formData, insuranceProducts, customerData);
+      const conversationHistory = [
+        { role: 'system', content: systemPrompt },
+        ...messages.map(msg => ({
+          role: msg.type === 'user' ? 'user' : 'assistant',
+          content: msg.content
+        })),
+        { role: 'user', content: currentInput }
+      ];
 
-      const response = await callLLMAPI(conversationHistory);
-    
-    const botMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      type: 'bot',
-      content: response,
-      timestamp: new Date(),
-    };
+      let response: string;
+      try {
+        response = await callLLMAPI(conversationHistory);
+      } catch (llmError) {
+        console.warn('LLM API failed, using rule-based response:', llmError);
+        response = generateRuleBasedResponse(currentInput, formData);
+      }
+      
+      const botMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'bot',
+        content: response,
+        timestamp: new Date(),
+      };
 
       setIsTyping(false);
-    setMessages(prev => [...prev, botMessage]);
-    
-    // Update conversation history in database
-    if (conversationId) {
-      const allMessages = [...messages, userMessage, botMessage].map(msg => ({
-        role: msg.type === 'user' ? 'user' : 'assistant',
-        content: msg.content,
-        timestamp: msg.timestamp.toISOString()
-      }));
+      setMessages(prev => [...prev, botMessage]);
       
-      await DatabaseAPI.updateConversationHistory(conversationId, allMessages);
-    }
+      // Update conversation history in database if available
+      if (conversationId) {
+        try {
+          const allMessages = [...messages, userMessage, botMessage].map(msg => ({
+            role: msg.type === 'user' ? 'user' : 'assistant',
+            content: msg.content,
+            timestamp: msg.timestamp.toISOString()
+          }));
+          
+          await DatabaseAPI.updateConversationHistory(conversationId, allMessages);
+        } catch (error) {
+          console.warn('Failed to update conversation history:', error);
+        }
+      }
     } catch (error) {
       console.error('Error in handleSendMessage:', error);
       setIsTyping(false);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'bot',
-        content: "I apologize, but I'm having trouble processing your request right now. Please try again or contact our support team for assistance.",
+        content: "I apologize for the technical difficulty. Let me try to help you with your insurance questions. Could you please rephrase your question?",
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -391,7 +530,11 @@ Start the conversation by greeting them personally and acknowledging their speci
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (conversationId) {
-        DatabaseAPI.endConversation(conversationId);
+        try {
+          DatabaseAPI.endConversation(conversationId);
+        } catch (error) {
+          console.warn('Failed to end conversation:', error);
+        }
       }
     };
 
@@ -399,7 +542,11 @@ Start the conversation by greeting them personally and acknowledging their speci
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       if (conversationId) {
-        DatabaseAPI.endConversation(conversationId);
+        try {
+          DatabaseAPI.endConversation(conversationId);
+        } catch (error) {
+          console.warn('Failed to end conversation:', error);
+        }
       }
     };
   }, [conversationId]);
