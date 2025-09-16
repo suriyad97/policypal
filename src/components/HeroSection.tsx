@@ -89,9 +89,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
               <br />in 30 Seconds
             </h1>
             
-            <p className="text-lg md:text-xl text-gray-600 mb-10 leading-relaxed font-medium">
-              Compare quotes from top insurers and save up to $847 per year
-            </p>
+           
             
             {/* Integrated Lead Form */}
             <motion.div
