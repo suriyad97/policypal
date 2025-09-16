@@ -255,6 +255,12 @@ Start the conversation by greeting them personally and acknowledging their speci
 
   // Call LLM API
   const callLLMAPI = async (messages: { role: string; content: string }[]) => {
+    // Check if LLM is configured
+    if (!LLM_CONFIG.endpoint || !LLM_CONFIG.subscriptionKey) {
+      console.warn('LLM API not configured, using fallback response');
+      throw new Error('LLM API not configured');
+    }
+
     try {
       const response = await fetch(LLM_CONFIG.endpoint, {
         method: 'POST',
@@ -288,8 +294,7 @@ Start the conversation by greeting them personally and acknowledging their speci
       }
     } catch (error) {
       console.error('LLM API Error:', error);
-      // Fallback response
-      return "I apologize, but I'm having trouble connecting to our AI system right now. However, I'm still here to help you with your insurance needs! Could you tell me more about what specific coverage you're looking for?";
+      throw error; // Re-throw to be handled by caller
     }
   };
 
@@ -366,7 +371,7 @@ Start the conversation by greeting them personally and acknowledging their speci
           ];
           response = await callLLMAPI(initialMessages);
         } catch (llmError) {
-          console.warn('LLM API failed, using fallback response:', llmError);
+          console.warn('LLM API not available, using fallback response:', llmError);
           response = `Hello ${formData.name}! 👋 I'm PolicyPal, your personal insurance advisor. I'm here to help you find the best ${formData.insuranceType} insurance options. 
 
 I can help you with:

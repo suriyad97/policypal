@@ -83,10 +83,10 @@ class CustomerData(BaseModel):
     insurance_type: str
     vehicle_number: Optional[str] = None
     vehicle_model: Optional[str] = None
-    vehicle_year: Optional[str] = None
+    vehicle_year: Optional[int] = None
     medical_history: Optional[str] = None
-    coverage_amount: Optional[float] = None
-    monthly_investment: Optional[float] = None
+    coverage_amount: Optional[str] = None
+    monthly_investment: Optional[str] = None
     investment_goal: Optional[str] = None
     current_provider: Optional[str] = None
 
