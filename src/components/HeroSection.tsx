@@ -236,7 +236,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
                   )}
                   </div>
                 </div>
-                </div>
 
                 {/* Submit Button */}
                 <motion.button
