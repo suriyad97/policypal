@@ -1,20 +1,25 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HeroSection } from './components/HeroSection';
-import { SinglePageForm, FormData } from './components/SinglePageForm';
+import { SimpleForm, SimpleFormData } from './components/SimpleForm';
 import { ChatInterface } from './components/ChatInterface';
 
-type AppState = 'hero' | 'form' | 'chat';
+type AppState = 'hero' | 'form' | 'chat' | 'acknowledgment';
 
 function App() {
   const [currentState, setCurrentState] = useState<AppState>('hero');
-  const [formData, setFormData] = useState<FormData | null>(null);
+  const [formData, setFormData] = useState<SimpleFormData | null>(null);
 
   const handleGetStarted = () => {
     setCurrentState('form');
   };
 
-  const handleFormComplete = (data: FormData) => {
+  const handleFormComplete = (data: SimpleFormData) => {
+    setFormData(data);
+    setCurrentState('acknowledgment');
+  };
+
+  const handleChatRequest = (data: SimpleFormData) => {
     setFormData(data);
     setCurrentState('chat');
   };
@@ -47,7 +52,10 @@ function App() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <SinglePageForm onComplete={handleFormComplete} />
+            <SimpleForm 
+              onComplete={handleFormComplete} 
+              onChatRequest={handleChatRequest}
+            />
           </motion.div>
         )}
         
@@ -59,7 +67,15 @@ function App() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <ChatInterface formData={formData} onBack={handleBackToHero} />
+            <ChatInterface 
+              formData={{
+                ...formData,
+                zipCode: formData.pincode,
+                insuranceType: 'general',
+                age: '30'
+              }} 
+              onBack={handleBackToHero} 
+            />
           </motion.div>
         )}
       </AnimatePresence>
