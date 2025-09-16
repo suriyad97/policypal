@@ -12,23 +12,6 @@ A comprehensive insurance management system built with React, TypeScript, Python
 - **Python Backend**: FastAPI server with async database operations
 - **Dual Backend Support**: Both Node.js and Python backend options
 
-## Environment Setup
-
-
-```env
-# LLM Configuration
-LLM_ENDPOINT=your_llm_endpoint
-LLM_SUBSCRIPTION_KEY=your_subscription_key
-LLM_DEPLOYMENT_NAME=your_deployment_name
-LLM_MODEL_NAME=your_model_name
-LLM_API_VERSION=your_api_version
-
-# Azure SQL Database
-AZURE_SQL_SERVER=tcp:ml-lms-db.database.windows.net
-AZURE_SQL_DATABASE=lms-db
-AZURE_SQL_USERNAME=lmsadmin-001
-AZURE_SQL_PASSWORD=Creative@2025
-```
 
 ## Python Backend Setup
 
