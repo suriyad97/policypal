@@ -1,4 +1,5 @@
 import sql from 'mssql';
+import { InMemoryDatabase } from './inMemoryDatabase.js';
 
 // Azure SQL Database configuration
 const dbConfig = {
@@ -39,18 +40,30 @@ async function getConnection() {
 
 // Database service class
 export class DatabaseService {
+  constructor() {
+    this.inMemoryDb = new InMemoryDatabase();
+    this.useInMemory = false;
+  }
+
   
   /**
    * Test database connection
    */
   async testConnection() {
     try {
+      // If we're already using in-memory, return true
+      if (this.useInMemory) {
+        return this.inMemoryDb.testConnection();
+      }
+
       const connection = await getConnection();
       const result = await connection.request().query('SELECT 1 as test');
       return result.recordset.length > 0;
     } catch (error) {
       console.error('Database connection test failed:', error);
-      return false;
+      console.log('🔄 Switching to in-memory database...');
+      this.useInMemory = true;
+      return this.inMemoryDb.testConnection();
     }
   }
 
@@ -59,6 +72,12 @@ export class DatabaseService {
    */
   async getInsuranceProducts(productType, age, gender) {
     try {
+      // Use in-memory database if SQL connection failed
+      if (this.useInMemory) {
+        console.log('📊 Using in-memory database for products');
+        return this.inMemoryDb.getInsuranceProducts(productType, age, gender);
+      }
+
       const connection = await getConnection();
       const request = connection.request();
       
@@ -118,7 +137,9 @@ export class DatabaseService {
       return products;
     } catch (error) {
       console.error('Database error in getInsuranceProducts:', error);
-      throw error;
+      console.log('🔄 Falling back to in-memory database for products...');
+      this.useInMemory = true;
+      return this.inMemoryDb.getInsuranceProducts(productType, age, gender);
     }
   }
 
@@ -127,6 +148,12 @@ export class DatabaseService {
    */
   async storeCustomer(customerData) {
     try {
+      // Use in-memory database if SQL connection failed
+      if (this.useInMemory) {
+        console.log('💾 Using in-memory database for customer storage');
+        return this.inMemoryDb.storeCustomer(customerData);
+      }
+
       console.log('Storing customer data:', customerData);
       
       // Validate required fields
@@ -175,7 +202,9 @@ export class DatabaseService {
       return customerId;
     } catch (error) {
       console.error('❌ Database error in storeCustomer:', error);
-      throw error;
+      console.log('🔄 Falling back to in-memory database for customer storage...');
+      this.useInMemory = true;
+      return this.inMemoryDb.storeCustomer(customerData);
     }
   }
 
@@ -343,6 +372,12 @@ export class DatabaseService {
    */
   async getCustomer(customerId) {
     try {
+      // Use in-memory database if SQL connection failed
+      if (this.useInMemory) {
+        console.log('👤 Using in-memory database for customer retrieval');
+        return this.inMemoryDb.getCustomer(customerId);
+      }
+
       const connection = await getConnection();
       const request = connection.request();
 
@@ -353,7 +388,9 @@ export class DatabaseService {
       return result.recordset[0] || null;
     } catch (error) {
       console.error('Database error in getCustomer:', error);
-      throw error;
+      console.log('🔄 Falling back to in-memory database for customer retrieval...');
+      this.useInMemory = true;
+      return this.inMemoryDb.getCustomer(customerId);
     }
   }
 
@@ -362,6 +399,12 @@ export class DatabaseService {
    */
   async createConversationHistory(customerId, sessionId) {
     try {
+      // Use in-memory database if SQL connection failed
+      if (this.useInMemory) {
+        console.log('💬 Using in-memory database for conversation creation');
+        return this.inMemoryDb.createConversationHistory(customerId, sessionId);
+      }
+
       const connection = await getConnection();
       const request = connection.request();
 
@@ -380,7 +423,9 @@ export class DatabaseService {
       return result.recordset[0]?.conversation_id || null;
     } catch (error) {
       console.error('Database error in createConversationHistory:', error);
-      return null;
+      console.log('🔄 Falling back to in-memory database for conversation creation...');
+      this.useInMemory = true;
+      return this.inMemoryDb.createConversationHistory(customerId, sessionId);
     }
   }
 
@@ -389,6 +434,12 @@ export class DatabaseService {
    */
   async updateConversationHistory(conversationId, messages) {
     try {
+      // Use in-memory database if SQL connection failed
+      if (this.useInMemory) {
+        console.log('📝 Using in-memory database for conversation update');
+        return this.inMemoryDb.updateConversationHistory(conversationId, messages);
+      }
+
       const connection = await getConnection();
       const request = connection.request();
 
@@ -405,7 +456,9 @@ export class DatabaseService {
       return true;
     } catch (error) {
       console.error('Database error in updateConversationHistory:', error);
-      return false;
+      console.log('🔄 Falling back to in-memory database for conversation update...');
+      this.useInMemory = true;
+      return this.inMemoryDb.updateConversationHistory(conversationId, messages);
     }
   }
 
@@ -414,6 +467,12 @@ export class DatabaseService {
    */
   async endConversation(conversationId) {
     try {
+      // Use in-memory database if SQL connection failed
+      if (this.useInMemory) {
+        console.log('🏁 Using in-memory database for conversation end');
+        return this.inMemoryDb.endConversation(conversationId);
+      }
+
       const connection = await getConnection();
       const request = connection.request();
 
@@ -430,7 +489,9 @@ export class DatabaseService {
       return true;
     } catch (error) {
       console.error('Database error in endConversation:', error);
-      return false;
+      console.log('🔄 Falling back to in-memory database for conversation end...');
+      this.useInMemory = true;
+      return this.inMemoryDb.endConversation(conversationId);
     }
   }
 }
