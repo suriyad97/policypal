@@ -146,25 +146,6 @@ export const AcknowledgmentPage: React.FC<AcknowledgmentPageProps> = ({
         )}
 
         {/* Company Trust Indicators */}
-        <motion.div
-          className="flex items-center justify-center space-x-6 text-sm text-gray-500"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.7 }}
-        >
-          <div className="flex items-center space-x-1">
-            <Shield className="w-4 h-4 text-blue-500" />
-            <span>PolicyPal</span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <Award className="w-4 h-4 text-green-500" />
-            <span>A+ Rated</span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <Users className="w-4 h-4 text-purple-500" />
-            <span>50K+ Customers</span>
-          </div>
-        </motion.div>
 
         {/* Final Thank You - Always show */}
         {!showChatRequest && (
