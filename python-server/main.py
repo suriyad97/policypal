@@ -62,9 +62,14 @@ ENV_USERNAME = os.getenv('AZURE_SQL_USERNAME')
 ENV_PASSWORD = os.getenv('AZURE_SQL_PASSWORD')
 ENV_DRIVER = os.getenv('AZURE_SQL_DRIVER') or os.getenv('ODBC_DRIVER')
 
+# Check if required environment variables are set
+if not all([ENV_SERVER, ENV_DATABASE, ENV_USERNAME, ENV_PASSWORD]):
+    logger.warning("Database environment variables not fully configured. Server will start but database operations may fail.")
+    logger.warning("Please set: AZURE_SQL_SERVER, AZURE_SQL_DATABASE, AZURE_SQL_USERNAME, AZURE_SQL_PASSWORD")
+
 DB_CONFIG = {
-    'server': _normalize_server(ENV_SERVER) if ENV_SERVER else 'tcp:localhost,1433',
-    'database': ENV_DATABASE or 'master',
+    'server': _normalize_server(ENV_SERVER) if ENV_SERVER else '',
+    'database': ENV_DATABASE or '',
     'username': ENV_USERNAME or '',
     'password': ENV_PASSWORD or '',
     'driver': (_detect_odbc_driver() if not ENV_DRIVER else (ENV_DRIVER if ENV_DRIVER.startswith('{') else '{' + ENV_DRIVER + '}')),
@@ -148,6 +153,8 @@ class DatabaseService:
 
     def get_connection(self):
         try:
+            if not all([DB_CONFIG['server'], DB_CONFIG['database'], DB_CONFIG['username'], DB_CONFIG['password']]):
+                raise Exception("Database configuration incomplete. Please check environment variables.")
             return pyodbc.connect(self.connection_string)
         except Exception as e:
             safe_conn_str = self.connection_string.replace(DB_CONFIG['password'], '***') if DB_CONFIG.get('password') else self.connection_string

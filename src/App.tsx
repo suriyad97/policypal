@@ -87,7 +87,7 @@ function App() {
               formData={{
                 ...formData,
                 zipCode: formData.pincode,
-                insuranceType: 'general',
+                insuranceType: 'auto',
                 age: '30'
               }} 
               onBack={handleBackToHome} 
