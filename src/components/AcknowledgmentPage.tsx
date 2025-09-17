@@ -108,28 +108,6 @@ export const AcknowledgmentPage: React.FC<AcknowledgmentPageProps> = ({
               Our AI-powered insurance advisor can help you find personalized quotes, compare coverage options, and answer any questions you have about insurance policies.
             </p>
 
-            {/* Benefits of Chat */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="text-center">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <Star className="w-5 h-5 text-blue-600" />
-                </div>
-                <p className="text-xs text-gray-600">Personalized Quotes</p>
-              </div>
-              <div className="text-center">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <Award className="w-5 h-5 text-blue-600" />
-                </div>
-                <p className="text-xs text-gray-600">Expert Guidance</p>
-              </div>
-              <div className="text-center">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <Users className="w-5 h-5 text-blue-600" />
-                </div>
-                <p className="text-xs text-gray-600">24/7 Support</p>
-              </div>
-            </div>
-
             {/* Action Buttons */}
             <div className="flex justify-center">
               <motion.button
