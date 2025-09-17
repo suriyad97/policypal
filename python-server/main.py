@@ -98,6 +98,8 @@ class CustomerData(BaseModel):
     monthly_investment: Optional[str] = Field(None, alias='monthlyInvestment')
     investment_goal: Optional[str] = Field(None, alias='investmentGoal')
     current_provider: Optional[str] = Field(None, alias='currentProvider')
+    
+    @validator('gender')
     def validate_gender(cls, v):
         if v is not None and v.lower() not in ['male', 'female', 'non_binary']:
             return v.lower() if v.lower() in ['male', 'female'] else 'male'
