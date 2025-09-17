@@ -294,14 +294,15 @@ export class DatabaseService {
     const insuranceType = this.mapInsuranceType(customerData.insuranceType);
     
     if (insuranceType === 'auto') {
-      if (!customerData.vehicleNumber?.trim()) {
-        throw new Error('Vehicle number is required for auto insurance');
+      // Only validate vehicle fields if they are provided
+      if (customerData.vehicleNumber !== undefined && !customerData.vehicleNumber?.trim()) {
+        throw new Error('Vehicle number cannot be empty if provided');
       }
-      if (!customerData.vehicleModel?.trim()) {
-        throw new Error('Vehicle model is required for auto insurance');
+      if (customerData.vehicleModel !== undefined && !customerData.vehicleModel?.trim()) {
+        throw new Error('Vehicle model cannot be empty if provided');
       }
-      if (!customerData.vehicleYear || isNaN(parseInt(customerData.vehicleYear))) {
-        throw new Error('Valid vehicle year is required for auto insurance');
+      if (customerData.vehicleYear !== undefined && (isNaN(parseInt(customerData.vehicleYear)) || parseInt(customerData.vehicleYear) < 1900)) {
+        throw new Error('Valid vehicle year is required if provided');
       }
     }
     
@@ -309,28 +310,29 @@ export class DatabaseService {
       const age = parseInt(customerData.age || customerData.lifeAge || customerData.savingsAge);
       const gender = customerData.gender || customerData.lifeGender || customerData.savingsGender;
       
-      if (!age || isNaN(age) || age < 18 || age > 80) {
-        throw new Error('Valid age between 18 and 80 is required');
+      // Only validate age and gender if they are provided
+      if (age && (isNaN(age) || age < 18 || age > 80)) {
+        throw new Error('Age must be between 18 and 80 if provided');
       }
-      if (!gender) {
-        throw new Error('Gender is required');
+      if (gender !== undefined && !gender) {
+        throw new Error('Gender cannot be empty if provided');
       }
       
       if (insuranceType === 'term_life') {
-        if (!customerData.coverageAmount?.trim()) {
-          throw new Error('Coverage amount is required for term life insurance');
+        if (customerData.coverageAmount !== undefined && !customerData.coverageAmount?.trim()) {
+          throw new Error('Coverage amount cannot be empty if provided');
         }
-        if (!customerData.relationship) {
-          throw new Error('Relationship is required for term life insurance');
+        if (customerData.relationship !== undefined && !customerData.relationship) {
+          throw new Error('Relationship cannot be empty if provided');
         }
       }
       
       if (insuranceType === 'savings') {
-        if (!customerData.monthlyInvestment?.trim()) {
-          throw new Error('Monthly investment is required for savings plans');
+        if (customerData.monthlyInvestment !== undefined && !customerData.monthlyInvestment?.trim()) {
+          throw new Error('Monthly investment cannot be empty if provided');
         }
-        if (!customerData.investmentGoal?.trim()) {
-          throw new Error('Investment goal is required for savings plans');
+        if (customerData.investmentGoal !== undefined && !customerData.investmentGoal?.trim()) {
+          throw new Error('Investment goal cannot be empty if provided');
         }
       }
     }
