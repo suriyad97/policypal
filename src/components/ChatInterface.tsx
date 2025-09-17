@@ -574,15 +574,7 @@ What questions do you have about ${formData.insuranceType} insurance?`,
               <p className="text-blue-600 text-sm font-medium">Licensed Insurance Advisor • Serving {formData.zipCode}</p>
             </div>
           </div>
-          <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-2 text-gray-600">
-              <Award className="w-4 h-4" />
-              <span className="text-sm font-medium">A+ Rated</span>
-            </div>
-            <div className="flex items-center space-x-2 text-gray-600">
-              <Users className="w-4 h-4" />
-              <span className="text-sm font-medium">50K+ Customers</span>
-            </div>
+          <div className="flex items-center">
             <button
               onClick={onBack}
               className="text-blue-600 hover:text-blue-800 transition-colors px-4 py-2 rounded-lg hover:bg-blue-50 font-medium"
