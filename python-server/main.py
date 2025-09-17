@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, validator
+from pydantic import BaseModel, validator, Field
 from typing import Optional, List, Dict, Any
 import pyodbc
 import os
@@ -79,29 +80,24 @@ DB_CONFIG = {
 }
 # Pydantic models
 class CustomerData(BaseModel):
+    class Config:
+        populate_by_name = True
+        
     name: str
     email: str
     phone: str
     age: Optional[int] = None
     gender: Optional[str] = None
-    zip_code: Optional[str] = None
-    insurance_type: str
-    vehicle_number: Optional[str] = None
-    vehicle_model: Optional[str] = None
-    vehicle_year: Optional[int] = None
-    medical_history: Optional[str] = None
-    coverage_amount: Optional[str] = None
-    monthly_investment: Optional[str] = None
-    investment_goal: Optional[str] = None
-    current_provider: Optional[str] = None
-
-    @validator('age')
-    def validate_age(cls, v):
-        if v is not None and (v < 18 or v > 80):
-            raise ValueError('Age must be between 18 and 80')
-        return v
-
-    @validator('gender')
+    zip_code: Optional[str] = Field(None, alias='zipCode')
+    insurance_type: str = Field(alias='insuranceType')
+    vehicle_number: Optional[str] = Field(None, alias='vehicleNumber')
+    vehicle_model: Optional[str] = Field(None, alias='vehicleModel')
+    vehicle_year: Optional[int] = Field(None, alias='vehicleYear')
+    medical_history: Optional[str] = Field(None, alias='medicalHistory')
+    coverage_amount: Optional[str] = Field(None, alias='coverageAmount')
+    monthly_investment: Optional[str] = Field(None, alias='monthlyInvestment')
+    investment_goal: Optional[str] = Field(None, alias='investmentGoal')
+    current_provider: Optional[str] = Field(None, alias='currentProvider')
     def validate_gender(cls, v):
         if v is not None and v.lower() not in ['male', 'female', 'non_binary']:
             return v.lower() if v.lower() in ['male', 'female'] else 'male'
@@ -171,9 +167,8 @@ class DatabaseService:
             INSERT INTO customers (
                 name, email, phone, age, gender, zip_code, insurance_type,
                 vehicle_number, vehicle_model, vehicle_year, medical_history,
-                coverage_amount, monthly_investment, investment_goal, current_provider,
-                created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())
+                coverage_amount, monthly_investment, investment_goal, current_provider
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
             
             cursor.execute(query, (
@@ -378,30 +373,12 @@ async def initialize_chat(request: ChatInitialize):
         # Store customer data if provided
         customer_id = None
         if request.formData:
-            # Convert formData to CustomerData format
+            # Create CustomerData directly from formData (Pydantic will handle field mapping)
             customer_data_dict = request.formData.copy()
             
-            # Map frontend field names to backend field names
-            field_mapping = {
-                'zipCode': 'zip_code',
-                'insuranceType': 'insurance_type',
-                'vehicleNumber': 'vehicle_number',
-                'vehicleModel': 'vehicle_model',
-                'vehicleYear': 'vehicle_year',
-                'medicalHistory': 'medical_history',
-                'coverageAmount': 'coverage_amount',
-                'monthlyInvestment': 'monthly_investment',
-                'investmentGoal': 'investment_goal',
-                'currentProvider': 'current_provider'
-            }
-            
-            for old_key, new_key in field_mapping.items():
-                if old_key in customer_data_dict:
-                    customer_data_dict[new_key] = customer_data_dict.pop(old_key)
-            
-            # Ensure required fields
-            if 'insurance_type' not in customer_data_dict:
-                customer_data_dict['insurance_type'] = 'auto'
+            # Ensure required fields with proper names
+            if 'insuranceType' not in customer_data_dict and 'insurance_type' not in customer_data_dict:
+                customer_data_dict['insuranceType'] = 'auto'
             
             try:
                 customer_data = CustomerData(**customer_data_dict)
