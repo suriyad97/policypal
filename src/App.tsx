@@ -3,9 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { HeroSection, SimpleFormData } from './components/HeroSection';
 import { AcknowledgmentPage } from './components/AcknowledgmentPage';
 import { ChatInterface } from './components/ChatInterface';
-import { LLMTest } from './components/LLMTest';
 
-type AppState = 'hero' | 'acknowledgment' | 'chat' | 'llm-test';
+type AppState = 'hero' | 'acknowledgment' | 'chat';
 
 function App() {
   const [currentState, setCurrentState] = useState<AppState>('hero');
@@ -30,22 +29,8 @@ function App() {
     setFormData(null);
   };
 
-  const handleTestLLM = () => {
-    setCurrentState('llm-test');
-  };
-
   return (
     <div className="min-h-screen">
-      {/* Debug button - remove in production */}
-      <div className="fixed top-4 right-4 z-50">
-        <button
-          onClick={handleTestLLM}
-          className="bg-purple-600 text-white px-3 py-1 rounded text-sm hover:bg-purple-700 transition-colors"
-        >
-          Test LLM
-        </button>
-      </div>
-
       <AnimatePresence mode="wait">
         {currentState === 'hero' && (
           <motion.div
@@ -92,26 +77,6 @@ function App() {
               }} 
               onBack={handleBackToHome} 
             />
-          </motion.div>
-        )}
-        
-        {currentState === 'llm-test' && (
-          <motion.div
-            key="llm-test"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <LLMTest />
-            <div className="fixed bottom-4 left-4">
-              <button
-                onClick={handleBackToHome}
-                className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition-colors"
-              >
-                ← Back to Home
-              </button>
-            </div>
           </motion.div>
         )}
       </AnimatePresence>
