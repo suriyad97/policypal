@@ -3,6 +3,9 @@ import cors from 'cors';
 import 'dotenv/config';
 import { DatabaseService } from './databaseService.js';
 
+// Initialize database service instance
+const dbService = new DatabaseService();
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -16,7 +19,7 @@ app.use(express.json());
 app.post('/api/database/products', async (req, res) => {
   try {
     const { productType, age, gender } = req.body;
-    const products = await DatabaseService.getInsuranceProducts(productType, age, gender);
+    const products = await dbService.getInsuranceProducts(productType, age, gender);
     res.json({ success: true, data: products });
   } catch (error) {
     console.error('Products API error:', error);
@@ -34,7 +37,7 @@ app.post('/api/database/customer', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Customer data is required' });
     }
     
-    const customerId = await DatabaseService.storeCustomer(customerData);
+    const customerId = await dbService.storeCustomer(customerData);
     console.log('Customer stored with ID:', customerId);
     res.json({ success: true, data: { customerId } });
   } catch (error) {
@@ -47,7 +50,7 @@ app.post('/api/database/customer', async (req, res) => {
 app.get('/api/database/customer/:id', async (req, res) => {
   try {
     const customerId = parseInt(req.params.id);
-    const customer = await DatabaseService.getCustomer(customerId);
+    const customer = await dbService.getCustomer(customerId);
     res.json({ success: true, data: customer });
   } catch (error) {
     console.error('Get customer API error:', error);
@@ -59,7 +62,7 @@ app.get('/api/database/customer/:id', async (req, res) => {
 app.post('/api/database/conversation', async (req, res) => {
   try {
     const { customerId, sessionId } = req.body;
-    const conversationId = await DatabaseService.createConversationHistory(customerId, sessionId);
+    const conversationId = await dbService.createConversationHistory(customerId, sessionId);
     res.json({ success: true, data: { conversationId } });
   } catch (error) {
     console.error('Conversation API error:', error);
@@ -72,7 +75,7 @@ app.put('/api/database/conversation/:id', async (req, res) => {
   try {
     const conversationId = parseInt(req.params.id);
     const { messages } = req.body;
-    const success = await DatabaseService.updateConversationHistory(conversationId, messages);
+    const success = await dbService.updateConversationHistory(conversationId, messages);
     res.json({ success });
   } catch (error) {
     console.error('Update conversation API error:', error);
@@ -84,7 +87,7 @@ app.put('/api/database/conversation/:id', async (req, res) => {
 app.put('/api/database/conversation/:id/end', async (req, res) => {
   try {
     const conversationId = parseInt(req.params.id);
-    const success = await DatabaseService.endConversation(conversationId);
+    const success = await dbService.endConversation(conversationId);
     res.json({ success });
   } catch (error) {
     console.error('End conversation API error:', error);
