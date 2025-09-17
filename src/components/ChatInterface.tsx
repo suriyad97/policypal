@@ -48,7 +48,7 @@ const LLM_CONFIG = {
 };
 
 // Backend API base URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const API_BASE_URL = '/api';
 
 // Rule-based response fallback
 const generateRuleBasedResponse = (message: string, formData: FormData): string => {
@@ -56,22 +56,80 @@ const generateRuleBasedResponse = (message: string, formData: FormData): string 
   const insuranceType = formData.insuranceType;
   const name = formData.name;
 
-  if (messageLower.includes('quote') || messageLower.includes('price') || messageLower.includes('cost')) {
+  // Price/Cost related queries
+  if (messageLower.includes('quote') || messageLower.includes('price') || messageLower.includes('cost') || messageLower.includes('premium') || messageLower.includes('rate') || messageLower.includes('how much')) {
     if (insuranceType === 'auto') {
-      return `For auto insurance quotes, ${name}, I'll need some details about your vehicle. Based on your information, our auto insurance plans typically start from ₹5,000 annually. Would you like me to show you specific plans that match your needs?`;
+      return `Great question about pricing, ${name}! Auto insurance rates typically range from ₹5,000 to ₹15,000 annually, depending on your vehicle type, age, and driving history. For a more accurate quote, I'd need to know: What type of vehicle do you drive and what's your driving experience?`;
     } else if (insuranceType === 'health') {
-      return `Health insurance premiums vary based on age and coverage, ${name}. Our health plans start from ₹8,000 annually. Would you like to see plans suitable for your age group?`;
+      return `${name}, health insurance premiums vary based on age and coverage needs. Individual plans typically start from ₹8,000 annually, while family plans range from ₹12,000-₹25,000. What's your age and are you looking for individual or family coverage?`;
     } else if (insuranceType === 'term_life') {
-      return `Term life insurance is very affordable, ${name}. Based on your profile, premiums can start from ₹6,000 annually. Shall I show you some term life options?`;
+      return `${name}, term life insurance is very affordable! Premiums typically start from ₹6,000 annually for ₹10 lakh coverage. The exact rate depends on your age and health. What coverage amount are you considering for your family's protection?`;
     } else {
-      return `I can help you get a quote for ${insuranceType} insurance, ${name}. Let me find the best options for you based on your requirements.`;
+      return `${name}, ${insuranceType} insurance pricing varies based on several factors. I'd be happy to get you personalized quotes from multiple insurers. What specific coverage are you most interested in?`;
     }
-  } else if (messageLower.includes('coverage') || messageLower.includes('benefit')) {
-    return `Our ${insuranceType} insurance provides comprehensive coverage including accident protection, liability coverage, and additional benefits. Would you like me to explain the specific coverage details for your situation?`;
-  } else if (messageLower.includes('claim')) {
-    return `Our claims process is simple and fast, ${name}. You can file claims online or through our mobile app. Most ${insuranceType} claims are processed within 24-48 hours. Do you have any specific questions about the claims process?`;
+  }
+  
+  // Coverage/Benefits related queries
+  if (messageLower.includes('coverage') || messageLower.includes('cover') || messageLower.includes('benefit') || messageLower.includes('what does') || messageLower.includes('include')) {
+    if (insuranceType === 'auto') {
+      return `${name}, comprehensive auto insurance typically includes: liability coverage (mandatory), collision coverage, theft protection, natural disaster coverage, personal accident cover, and roadside assistance. Which of these aspects interests you most?`;
+    } else if (insuranceType === 'health') {
+      return `${name}, health insurance covers hospitalization expenses, pre/post hospitalization, day-care procedures, ambulance charges, and cashless treatment at network hospitals. Many plans also include wellness benefits. What specific health concerns do you want covered?`;
+    } else {
+      return `${name}, ${insuranceType} insurance provides comprehensive protection tailored to your needs. Would you like me to explain the specific coverage details and benefits available?`;
+    }
+  }
+  
+  // Claims related queries
+  if (messageLower.includes('claim') || messageLower.includes('accident') || messageLower.includes('damage') || messageLower.includes('file')) {
+    return `${name}, our claims process is designed to be simple and fast! You can file claims online, through our mobile app, or by calling our 24/7 helpline. Most ${insuranceType} claims are processed within 24-48 hours for cashless services. Have you had to file insurance claims before?`;
+  }
+  
+  // Comparison queries
+  if (messageLower.includes('compare') || messageLower.includes('difference') || messageLower.includes('better') || messageLower.includes('vs') || messageLower.includes('which')) {
+    return `${name}, that's a smart approach! I can help you compare different ${insuranceType} insurance options based on coverage, premium, claim settlement ratio, and customer service. Each insurer has unique strengths. Would you like me to show you a comparison of top insurers?`;
+  }
+  
+  // Timeline/When queries
+  if (messageLower.includes('when') || messageLower.includes('start') || messageLower.includes('begin') || messageLower.includes('how long')) {
+    return `${name}, most insurance policies can start as soon as tomorrow! Once you choose a plan and complete the application, ${insuranceType} insurance typically becomes effective within 24 hours for online purchases. Would you like to start the application process?`;
+  }
+  
+  // Requirements/Documents queries
+  if (messageLower.includes('need') || messageLower.includes('require') || messageLower.includes('document') || messageLower.includes('papers')) {
+    if (insuranceType === 'auto') {
+      return `${name}, for auto insurance you'll need: vehicle registration certificate, driving license, previous insurance policy (if any), and vehicle photos. I can guide you through the entire process. Do you have these documents ready?`;
+    } else if (insuranceType === 'health') {
+      return `${name}, for health insurance you'll typically need: age proof, address proof, income proof, and medical checkup reports (if required). Most documents can be uploaded digitally. What documents do you currently have?`;
+    } else {
+      return `${name}, for ${insuranceType} insurance, you'll need basic identity and address documents. I'll guide you through exactly what's needed. Would you like me to send you a detailed checklist?`;
+    }
+  }
+  
+  // Greeting responses
+  if (messageLower.includes('hello') || messageLower.includes('hi') || messageLower.includes('hey')) {
+    return `Hello ${name}! Great to chat with you! I'm here to help you find the perfect ${insuranceType} insurance. What questions can I answer for you today?`;
+  }
+  
+  // Thank you responses
+  if (messageLower.includes('thank') || messageLower.includes('thanks')) {
+    return `You're very welcome, ${name}! I'm happy to help you with your ${insuranceType} insurance needs. Is there anything else you'd like to know?`;
+  }
+  
+  // Help/Assistance queries
+  if (messageLower.includes('help') || messageLower.includes('assist') || messageLower.includes('support')) {
+    return `Absolutely, ${name}! I'm here to help you with everything related to ${insuranceType} insurance - from explaining coverage options to getting quotes and understanding the claims process. What would be most helpful for you right now?`;
   } else {
-    return `I understand you're asking about ${insuranceType} insurance, ${name}. I'm here to help with quotes, coverage details, claims information, and any other questions. What specific aspect would you like to know more about?`;
+    // Dynamic default responses based on context
+    const responses = [
+      `That's an interesting question about ${insuranceType} insurance, ${name}. Could you tell me more about what specific information you're looking for?`,
+      `${name}, I'd be happy to help you with that! For ${insuranceType} insurance, I can assist with coverage options, pricing, claims, and more. What aspect interests you most?`,
+      `Great question, ${name}! Let me help you understand ${insuranceType} insurance better. Are you looking for information about coverage, costs, or something else specific?`,
+      `${name}, I'm here to make ${insuranceType} insurance simple for you. Whether it's about policies, premiums, or protection - what would you like to explore first?`
+    ];
+    
+    // Return a random response to avoid repetition
+    return responses[Math.floor(Math.random() * responses.length)];
   }
 };
 
@@ -312,7 +370,16 @@ Start the conversation by greeting them personally and acknowledging their speci
         
         try {
           // 1. Store customer data in database
-          const customerIdResult = await DatabaseAPI.storeCustomer(formData);
+          const customerData = {
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            zipCode: formData.zipCode,
+            insuranceType: formData.insuranceType,
+            age: formData.age,
+            gender: formData.gender
+          };
+          const customerIdResult = await DatabaseAPI.storeCustomer(customerData);
           if (customerIdResult) {
             storedCustomerId = customerIdResult.toString();
             setCustomerId(storedCustomerId);
@@ -410,7 +477,7 @@ What would you like to know about ${formData.insuranceType} insurance?`;
         const fallbackMessage: Message = {
           id: '1',
           type: 'bot',
-          content: `Hello ${formData.name}! 👋 I'm PolicyPal, your personal insurance advisor. I'm here to help you with your ${formData.insuranceType} insurance needs.
+          content: `Hello ${formData.name}! 👋 I'm PolicyPal, your personal insurance advisor. I'm here to help you with your insurance needs.
 
 I can assist you with:
 • Getting quotes and comparing plans
@@ -418,7 +485,7 @@ I can assist you with:
 • Understanding insurance terms
 • Finding the best rates for your situation
 
-What questions do you have about ${formData.insuranceType} insurance?`,
+What questions do you have about insurance?`,
           timestamp: new Date(),
         };
         setMessages([fallbackMessage]);
