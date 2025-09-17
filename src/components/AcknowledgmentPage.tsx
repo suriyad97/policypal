@@ -131,25 +131,15 @@ export const AcknowledgmentPage: React.FC<AcknowledgmentPageProps> = ({
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex justify-center">
               <motion.button
                 onClick={onChatRequest}
-                className="flex-1 bg-gradient-to-r from-blue-500 to-green-500 text-white py-3 px-6 rounded-xl font-semibold flex items-center justify-center space-x-2 hover:shadow-lg transition-all duration-300"
+                className="bg-gradient-to-r from-blue-500 to-green-500 text-white py-3 px-8 rounded-xl font-semibold flex items-center justify-center space-x-2 hover:shadow-lg transition-all duration-300"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
                 <MessageCircle className="w-5 h-5" />
                 <span>Yes, I'd like assistance</span>
-              </motion.button>
-
-              <motion.button
-                onClick={handleDeclineChat}
-                className="flex-1 bg-gray-100 text-gray-700 py-3 px-6 rounded-xl font-medium hover:bg-gray-200 transition-all duration-300 flex items-center justify-center space-x-2"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <X className="w-4 h-4" />
-                <span>No, thanks</span>
               </motion.button>
             </div>
           </motion.div>
