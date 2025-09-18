@@ -107,7 +107,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
             >
               {/* Form Header */}
               <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">Get Your Health Insurance Quote</h2>
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">Submit</h2>
                 <p className="text-gray-600">
                   Protect your health with the right coverage
                 </p>
