@@ -17,8 +17,11 @@ interface HeroSectionProps {
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
-  const { register, handleSubmit, formState: { errors } } = useForm<SimpleFormData>();
+  const { register, handleSubmit, watch, formState: { errors } } = useForm<SimpleFormData>();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  
+  // Watch form data for conditional styling
+  const formData = watch();
   
   // Set default insurance type to health
   React.useEffect(() => {
