@@ -266,17 +266,6 @@ Start the conversation by acknowledging their health insurance needs and offerin
   generateHealthRequirementsResponse(name) {
     return `${name}, for health insurance, you'll typically need: age proof, address proof, income proof, and medical checkup reports (usually required for sum insured above ₹5 lakhs or age above 45). For family plans, you'll need documents for all members. Most documents can be uploaded digitally. Do you have these documents readily available?`;
   }
-    
-    // Default helpful response
-    return this.generateDefaultResponse(insuranceType, name);
-  }
-
-  /**
-   * Check if message contains any of the specified keywords
-   */
-  containsKeywords(message, keywords) {
-    return keywords.some(keyword => message.includes(keyword));
-  }
 
   /**
    * Generate health insurance specific responses
@@ -299,6 +288,13 @@ Start the conversation by acknowledging their health insurance needs and offerin
     }
     
     return `${name}, health insurance is one of the most important investments you can make. With rising medical costs, having good health coverage gives you peace of mind and financial protection. What specific aspect of health insurance would you like to know more about?`;
+  }
+
+  /**
+   * Check if message contains any of the specified keywords
+   */
+  containsKeywords(message, keywords) {
+    return keywords.some(keyword => message.includes(keyword));
   }
 
   /**
