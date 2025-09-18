@@ -55,7 +55,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
           scale: [1, 0.9, 1],
         }}
         transition={{
-                    className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none transition-all bg-white"
+          duration: 6,
           repeat: Infinity,
           ease: "easeInOut",
         }}
