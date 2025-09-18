@@ -268,18 +268,6 @@ Start the conversation by acknowledging their health insurance needs and offerin
   }
 
   /**
-   * Generate health insurance specific responses
-   */
-  generateHealthSpecificResponse(message, name) {
-    if (message.includes('family') || message.includes('spouse') || message.includes('children')) {
-      return `${name}, family health insurance is a great choice! Family floater plans cover your entire family under one policy with shared sum insured. This is usually more economical than individual policies. How many family members would you like to include?`;
-    }
-    
-    // Default helpful response
-    return this.generateDefaultResponse('health', name);
-  }
-
-  /**
    * Check if message contains any of the specified keywords
    */
   containsKeywords(message, keywords) {
@@ -287,43 +275,33 @@ Start the conversation by acknowledging their health insurance needs and offerin
   }
 
   /**
-   * Generate price-related responses
+   * Generate health insurance specific responses
    */
-  generatePriceResponse(insuranceType, name, zipCode) {
-    const responses = {
-      auto: `Great question about pricing, ${name}! Auto insurance rates in ${zipCode} typically range from ₹5,000 to ₹15,000 annually, depending on your vehicle, driving history, and coverage level. I can help you get personalized quotes from multiple insurers. Would you like me to show you some specific options?`,
-      
-      health: `${name}, health insurance premiums vary based on age, coverage, and location. In ${zipCode}, individual plans typically start from ₹8,000 annually, while family floater plans range from ₹12,000 to ₹25,000. Would you like me to find plans that fit your budget?`,
-      
-      term_life: `${name}, term life insurance is very affordable! Based on your profile, premiums typically start from ₹6,000 annually for ₹10 lakh coverage. The exact rate depends on your age, health, and coverage amount. Shall I show you some specific term life options?`,
-      
-      savings: `${name}, our savings plans offer flexible premium options starting from ₹2,500 monthly. The returns and benefits depend on your investment goals and time horizon. Would you like me to explain the different savings plan options available?`,
-      
-      home: `${name}, home insurance in ${zipCode} typically costs ₹3,000 to ₹8,000 annually, depending on your property value and coverage needs. This is a small price for protecting your biggest investment! Would you like a personalized quote?`
-    };
+  generateHealthSpecificResponse(message, name) {
+    if (message.includes('family') || message.includes('spouse') || message.includes('children')) {
+      return `${name}, family health insurance is a great choice! Family floater plans cover your entire family under one policy with shared sum insured. This is usually more economical than individual policies. How many family members would you like to include, and what's your preferred sum insured amount?`;
+    }
     
-    return responses[insuranceType] || 
-           `${name}, insurance pricing varies based on many factors including your specific needs and location in ${zipCode}. I'd be happy to get you personalized quotes from multiple insurers. What specific coverage are you most interested in?`;
+    if (message.includes('individual') || message.includes('personal') || message.includes('myself')) {
+      return `${name}, individual health insurance gives you dedicated coverage with your own sum insured. This ensures your coverage isn't shared with others. What sum insured are you considering, and do you have any specific health concerns or preferred hospitals?`;
+    }
+    
+    if (message.includes('pre-existing') || message.includes('medical condition') || message.includes('diabetes') || message.includes('hypertension')) {
+      return `${name}, pre-existing conditions are covered after waiting periods (typically 2-4 years). Some insurers offer shorter waiting periods or immediate coverage for certain conditions. It's important to declare all conditions honestly. What specific conditions are you concerned about?`;
+    }
+    
+    if (message.includes('hospital') || message.includes('network') || message.includes('cashless')) {
+      return `${name}, network hospitals are crucial for cashless treatment. Most insurers have 5,000+ network hospitals across India. You can get treatment without paying upfront at these hospitals. Would you like me to check which hospitals in your area are covered by different insurers?`;
+    }
+    
+    return `${name}, health insurance is one of the most important investments you can make. With rising medical costs, having good health coverage gives you peace of mind and financial protection. What specific aspect of health insurance would you like to know more about?`;
   }
 
   /**
-   * Generate coverage-related responses
+   * Generate default helpful response
    */
-  generateCoverageResponse(insuranceType, name) {
-    const responses = {
-      auto: `${name}, comprehensive auto insurance typically includes: liability coverage (mandatory), collision coverage, comprehensive coverage for theft/natural disasters, personal accident cover, and roadside assistance. Would you like me to explain any of these in detail?`,
-      
-      health: `${name}, health insurance coverage includes: hospitalization expenses, pre and post hospitalization, day-care procedures, ambulance charges, and cashless treatment at network hospitals. Many plans also include wellness benefits. What specific health concerns do you want covered?`,
-      
-      term_life: `${name}, term life insurance provides: death benefit to nominees, terminal illness benefit, accidental death benefit, and premium waiver on disability. It's pure protection with no investment component. Would you like to know about the claim process?`,
-      
-      savings: `${name}, savings plans combine insurance with investment, offering: life cover, guaranteed returns, tax benefits under 80C, maturity benefits, and flexible premium payment options. What are your primary financial goals?`,
-      
-      home: `${name}, home insurance covers: building structure, contents/belongings, natural disasters, theft/burglary, public liability, and temporary accommodation expenses. Some plans also include personal accident cover. What aspects of your home are you most concerned about?`
-    };
-    
-    return responses[insuranceType] || 
-           `${name}, insurance coverage varies by policy type. I'd be happy to explain the specific benefits and coverage details for the insurance you're interested in. What particular aspect would you like to know more about?`;
+  generateDefaultResponse(insuranceType, name) {
+    return `${name}, I'm here to help you with all aspects of health insurance! Whether you want to know about coverage options, pricing, claims process, network hospitals, or need help choosing the right policy, I've got you covered. What specific information about health insurance would be most helpful for you right now?`;
   }
 
   /**
@@ -401,13 +379,6 @@ Start the conversation by acknowledging their health insurance needs and offerin
       return `${name}, protecting your home is protecting your biggest investment! Home insurance covers both the structure and contents, plus provides liability protection. Whether you own a house, apartment, or are renting, we have suitable coverage options. What type of property are you looking to insure?`;
     }
     return `${name}, home insurance is often overlooked but incredibly important. It protects against natural disasters, theft, fire, and even provides temporary accommodation if your home becomes uninhabitable. Given the increasing frequency of natural disasters, it's becoming essential. What aspects of home protection concern you most?`;
-  }
-
-  /**
-   * Generate default helpful response
-   */
-  generateDefaultResponse(insuranceType, name) {
-    return `${name}, I'm here to help you with all aspects of ${insuranceType} insurance! Whether you want to know about coverage options, pricing, claims process, or need help choosing the right policy, I've got you covered. What specific information would be most helpful for you right now?`;
   }
 
   /**
