@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HeroSection, SimpleFormData } from './components/HeroSection';
-import { AcknowledgmentPage } from './components/AcknowledgmentPage';
 import { ChatInterface } from './components/ChatInterface';
 
-type AppState = 'hero' | 'acknowledgment' | 'chat';
+type AppState = 'hero' | 'chat';
 
 function App() {
   const [currentState, setCurrentState] = useState<AppState>('hero');
@@ -12,16 +11,7 @@ function App() {
 
   const handleFormSubmit = (data: SimpleFormData) => {
     setFormData(data);
-    setCurrentState('acknowledgment');
-  };
-
-  const handleChatRequest = () => {
     setCurrentState('chat');
-  };
-
-  const handleDeclineChat = () => {
-    // Stay on acknowledgment page
-    console.log('User declined chat assistance');
   };
 
   const handleBackToHome = () => {
@@ -41,22 +31,6 @@ function App() {
             transition={{ duration: 0.5 }}
           >
             <HeroSection onFormSubmit={handleFormSubmit} />
-          </motion.div>
-        )}
-        
-        {currentState === 'acknowledgment' && formData && (
-          <motion.div
-            key="acknowledgment"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <AcknowledgmentPage 
-              formData={formData}
-              onChatRequest={handleChatRequest}
-              onDeclineChat={handleDeclineChat}
-            />
           </motion.div>
         )}
         

@@ -439,7 +439,7 @@ Start the conversation by greeting them personally and acknowledging their speci
           response = await callLLMAPI(initialMessages);
         } catch (llmError) {
           console.warn('LLM API not available, using fallback response:', llmError);
-          response = `Hello ${formData.name}! 👋 I'm PolicyPal, your personal insurance advisor. I'm here to help you find the best ${formData.insuranceType} insurance options. 
+          response = `Hello ${formData.name}! 👋 I'm PolicyPal, your personal insurance advisor. I'm here to help you find the best insurance options for you. 
 
 I can help you with:
 • Comparing different insurance plans
@@ -447,22 +447,61 @@ I can help you with:
 • Finding the best rates for your needs
 • Answering any questions about insurance
 
-What would you like to know about ${formData.insuranceType} insurance?`;
+What would you like to know about insurance?`;
         }
         
-        const initialMessage: Message = {
+        // Create acknowledgment message first
+        const acknowledgmentMessage: Message = {
+          id: '0',
+          type: 'bot',
+          content: `Thank you, ${formData.name}! 🎉 Your information has been successfully submitted. I appreciate your interest in finding better insurance coverage!
+
+📧 Email: ${formData.email}
+📱 Phone: ${formData.phone}  
+📍 Pincode: ${formData.pincode}
+✅ Status: Submitted
+
+Now, let me help you with personalized insurance recommendations and answer any questions you have!`,
+          timestamp: new Date(),
+        };
+
+        const welcomeMessage: Message = {
+          id: '1',
+          type: 'bot',
+        // Create acknowledgment message first
+        const acknowledgmentMessage: Message = {
+          id: '0',
+          type: 'bot',
+          content: `Thank you, ${formData.name}! 🎉 Your information has been successfully submitted. I appreciate your interest in finding better insurance coverage!
+
+📧 Email: ${formData.email}
+📱 Phone: ${formData.phone}  
+📍 Pincode: ${formData.pincode}
+✅ Status: Submitted
+
+Now, let me help you with personalized insurance recommendations and answer any questions you have!`,
+          timestamp: new Date(),
+        };
+
+          content: response,
+          timestamp: new Date(),
+        };
+
+        const welcomeMessage: Message = {
           id: '1',
           type: 'bot',
           content: response,
           timestamp: new Date(),
         };
 
-        setMessages([initialMessage]);
+        setMessages([acknowledgmentMessage, welcomeMessage]);
         
         // Store initial conversation in database if available
         if (conversationHistoryId) {
           try {
             await DatabaseAPI.updateConversationHistory(conversationHistoryId, [
+              { role: 'assistant', content: acknowledgmentMessage.content, timestamp: acknowledgmentMessage.timestamp.toISOString() },
+              { role: 'assistant', content: acknowledgmentMessage.content, timestamp: acknowledgmentMessage.timestamp.toISOString() },
               { role: 'assistant', content: response, timestamp: new Date().toISOString() }
             ]);
           } catch (error) {
@@ -475,6 +514,20 @@ What would you like to know about ${formData.insuranceType} insurance?`;
         
         // Final fallback initialization
         const fallbackMessage: Message = {
+          id: '0',
+          type: 'bot',
+          content: `Thank you, ${formData.name}! 🎉 Your information has been successfully submitted. I appreciate your interest in finding better insurance coverage!
+
+📧 Email: ${formData.email}
+📱 Phone: ${formData.phone}  
+📍 Pincode: ${formData.pincode}
+✅ Status: Submitted
+
+Now, let me help you with personalized insurance recommendations and answer any questions you have!`,
+          timestamp: new Date(),
+        };
+        
+        const fallbackWelcomeMessage: Message = {
           id: '1',
           type: 'bot',
           content: `Hello ${formData.name}! 👋 I'm PolicyPal, your personal insurance advisor. I'm here to help you with your insurance needs.
@@ -488,7 +541,7 @@ I can assist you with:
 What questions do you have about insurance?`,
           timestamp: new Date(),
         };
-        setMessages([fallbackMessage]);
+        setMessages([fallbackMessage, fallbackWelcomeMessage]);
       }
       setIsTyping(false);
     };
