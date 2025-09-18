@@ -287,7 +287,8 @@ Start the conversation by acknowledging their health insurance needs and offerin
       return `${name}, network hospitals are crucial for cashless treatment. Most insurers have 5,000+ network hospitals across India. You can get treatment without paying upfront at these hospitals. Would you like me to check which hospitals in your area are covered by different insurers?`;
     }
     
-    return `${name}, health insurance is one of the most important investments you can make. With rising medical costs, having good health coverage gives you peace of mind and financial protection. What specific aspect of health insurance would you like to know more about?`;
+    // Default helpful response
+    return this.generateDefaultResponse(insuranceType, name);
   }
 
   /**
@@ -298,10 +299,107 @@ Start the conversation by acknowledging their health insurance needs and offerin
   }
 
   /**
+   * Generate coverage-related responses
+   */
+  generateCoverageResponse(insuranceType, name) {
+    const responses = {
+      auto: `${name}, comprehensive auto insurance typically includes: liability coverage (mandatory), collision coverage, comprehensive coverage for theft/natural disasters, personal accident cover, and roadside assistance. Would you like me to explain any of these in detail?`,
+      
+      health: `${name}, health insurance coverage includes: hospitalization expenses, pre and post hospitalization, day-care procedures, ambulance charges, and cashless treatment at network hospitals. Many plans also include wellness benefits. What specific health concerns do you want covered?`,
+      
+      term_life: `${name}, term life insurance provides: death benefit to nominees, terminal illness benefit, accidental death benefit, and premium waiver on disability. It's pure protection with no investment component. Would you like to know about the claim process?`,
+      
+      savings: `${name}, savings plans combine insurance with investment, offering: life cover, guaranteed returns, tax benefits under 80C, maturity benefits, and flexible premium payment options. What are your primary financial goals?`,
+      
+      home: `${name}, home insurance covers: building structure, contents/belongings, natural disasters, theft/burglary, public liability, and temporary accommodation expenses. Some plans also include personal accident cover. What aspects of your home are you most concerned about?`
+    };
+    
+    return responses[insuranceType] || 
+           `${name}, insurance coverage varies by policy type. I'd be happy to explain the specific benefits and coverage details for the insurance you're interested in. What particular aspect would you like to know more about?`;
+  }
+
+  /**
+   * Generate claims-related responses
+   */
+  generateClaimsResponse(insuranceType, name) {
+    return `${name}, our claims process is designed to be simple and fast! You can file claims online, through our mobile app, or by calling our 24/7 helpline. Most ${insuranceType} claims are processed within 24-48 hours for cashless services, and reimbursement claims typically take 7-10 days. We also provide claim assistance to guide you through the process. Have you had to file insurance claims before?`;
+  }
+
+  /**
+   * Generate comparison responses
+   */
+  generateComparisonResponse(insuranceType, name) {
+    return `${name}, that's a smart approach! I can help you compare different ${insuranceType} insurance options based on coverage, premium, claim settlement ratio, network hospitals/garages, and customer service ratings. Each insurer has unique strengths - some excel in customer service, others in claim settlement speed. Would you like me to show you a comparison of top insurers for ${insuranceType} insurance?`;
+  }
+
+  /**
+   * Generate timeline responses
+   */
+  generateTimelineResponse(insuranceType, name) {
+    return `${name}, most insurance policies can start as soon as tomorrow! Once you choose a plan and complete the application, ${insuranceType} insurance typically becomes effective within 24 hours for online purchases. Some policies may have waiting periods for specific benefits, which I'll explain when showing you options. Would you like to start the application process today?`;
+  }
+
+  /**
+   * Generate requirements responses
+   */
+  generateRequirementsResponse(insuranceType, name) {
+    const requirements = {
+      auto: 'vehicle registration certificate, driving license, previous insurance policy (if any), and vehicle photos',
+      health: 'age proof, address proof, income proof, and medical checkup reports (if required)',
+      term_life: 'age proof, income proof, medical checkup, and nominee details',
+      savings: 'age proof, address proof, income proof, and bank account details',
+      home: 'property documents, previous insurance policy (if any), and property valuation'
+    };
+    
+    const docs = requirements[insuranceType] || 'basic identity and address documents';
+    return `${name}, for ${insuranceType} insurance, you'll typically need: ${docs}. Don't worry - I'll guide you through the entire process and help you gather everything needed. Most documents can be uploaded digitally. Do you have these documents readily available?`;
+  }
+
+  /**
+   * Generate auto-specific responses
+   */
+  generateAutoSpecificResponse(message, name) {
+    if (message.includes('vehicle') || message.includes('car') || message.includes('bike')) {
+      return `${name}, I'd be happy to help with your vehicle insurance! Whether it's a car, bike, or commercial vehicle, we have specialized coverage options. What type of vehicle are you looking to insure, and do you have any specific concerns about coverage?`;
+    }
+    return `${name}, for auto insurance, I can help you with comprehensive coverage, third-party liability, add-on covers like zero depreciation, engine protection, and roadside assistance. What specific aspect of auto insurance interests you most?`;
+  }
+
+  /**
+   * Generate life insurance specific responses
+   */
+  generateLifeSpecificResponse(message, name) {
+    if (message.includes('family') || message.includes('children') || message.includes('spouse')) {
+      return `${name}, term life insurance is the best way to ensure your family's financial security. The coverage amount should typically be 10-15 times your annual income. This ensures your family can maintain their lifestyle and meet financial goals even in your absence. What's your primary concern for your family's future?`;
+    }
+    return `${name}, term life insurance provides maximum coverage at minimum cost. It's pure protection - if something happens to you, your nominees receive the full sum assured. The earlier you start, the lower your premiums. What coverage amount are you considering?`;
+  }
+
+  /**
+   * Generate savings-specific responses
+   */
+  generateSavingsSpecificResponse(message, name) {
+    if (message.includes('retirement') || message.includes('future') || message.includes('goal')) {
+      return `${name}, savings plans are excellent for long-term wealth creation! They combine life insurance with systematic savings, offering guaranteed returns plus tax benefits. Whether it's retirement planning, child's education, or buying a home, we can structure a plan to meet your specific goals. What's your primary financial objective?`;
+    }
+    return `${name}, savings plans offer the dual benefit of protection and wealth creation. With guaranteed returns and tax benefits under Section 80C, they're a smart way to build your financial future. What's your investment timeline and risk appetite?`;
+  }
+
+  /**
+   * Generate home-specific responses
+   */
+  generateHomeSpecificResponse(message, name) {
+    if (message.includes('apartment') || message.includes('house') || message.includes('property')) {
+      return `${name}, protecting your home is protecting your biggest investment! Home insurance covers both the structure and contents, plus provides liability protection. Whether you own a house, apartment, or are renting, we have suitable coverage options. What type of property are you looking to insure?`;
+    }
+    return `${name}, home insurance is often overlooked but incredibly important. It protects against natural disasters, theft, fire, and even provides temporary accommodation if your home becomes uninhabitable. Given the increasing frequency of natural disasters, it's becoming essential. What aspects of home protection concern you most?`;
+  }
+
+  /**
    * Generate default helpful response
    */
   generateDefaultResponse(insuranceType, name) {
-    return `${name}, I'm here to help you with all aspects of health insurance! Whether you want to know about coverage options, pricing, claims process, network hospitals, or need help choosing the right policy, I've got you covered. What specific information about health insurance would be most helpful for you right now?`;
+    return `${name}, I'm here to help you with all aspects of ${insuranceType} insurance! Whether you want to know about coverage options, pricing, claims process, or need help choosing the right policy, I've got you covered. What specific information would be most helpful for you right now?`;
   }
 
   /**
