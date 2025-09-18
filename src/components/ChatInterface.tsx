@@ -415,7 +415,7 @@ Start the conversation by greeting them personally and acknowledging their speci
           age: formData.age || '30',
           gender: formData.gender || 'all',
           zip_code: formData.zipCode,
-          insurance_type: 'health',
+          insurance_type: formData.insuranceType,
           medical_history: formData.medicalHistory,
           current_provider: formData.currentProvider
         };
@@ -557,7 +557,7 @@ What questions do you have about insurance?`,
         age: formData.age || '30',
         gender: formData.gender || 'all',
         zip_code: formData.zipCode,
-        insurance_type: 'health',
+        insurance_type: formData.insuranceType,
         medical_history: formData.medicalHistory,
         current_provider: formData.currentProvider
       };
@@ -697,7 +697,7 @@ What questions do you have about insurance?`,
                 </div>
                 <div className="flex items-center space-x-3">
                   <Shield className="w-4 h-4 text-gray-500" />
-                  <span className="text-gray-700">Health Insurance</span>
+                  <span className="text-gray-700 capitalize">{formData.insuranceType} Insurance</span>
                 </div>
               </div>
             </div>

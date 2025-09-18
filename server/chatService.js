@@ -62,7 +62,10 @@ export class ChatService {
    */
   generateSystemPrompt(formData, customerId = null) {
     const insuranceContext = {
+      auto: `The customer is looking for auto insurance for their vehicle.`,
       health: `The customer is looking for health insurance.`,
+      life: `The customer is looking for life insurance coverage.`,
+      home: `The customer is looking for home insurance coverage.`
     };
 
     return `You are PolicyPal, a professional and friendly insurance advisor. You are helping ${formData.name} from ${formData.zipCode} with their insurance needs.
@@ -71,22 +74,22 @@ Customer Details:
 - Name: ${formData.name}
 - Location: ${formData.zipCode}
 - Age: ${formData.age}
-- Insurance Type: health
+- Insurance Type: ${formData.insuranceType}
 ${customerId ? `- Customer ID: ${customerId}` : ''}
 
-Context: The customer is looking for health insurance coverage.
+Context: ${insuranceContext[formData.insuranceType] || 'The customer is looking for insurance coverage.'}
 
 Instructions:
-1. Be professional, helpful, and knowledgeable about health insurance
+1. Be professional, helpful, and knowledgeable about ${formData.insuranceType} insurance
 2. Ask relevant follow-up questions to better understand their needs
 3. Provide personalized recommendations
-4. Explain health insurance terms in simple language
+4. Explain insurance terms in simple language
 5. Focus on finding the best coverage for their specific situation
 6. Keep responses concise but informative (max 150 words)
 7. Show empathy and build trust
 8. Use a friendly, conversational tone
 
-Start the conversation by acknowledging their health insurance needs and offering to help.`;
+Start the conversation by acknowledging their ${formData.insuranceType} insurance needs and offering to help.`;
   }
 
   /**
@@ -178,9 +181,16 @@ Start the conversation by acknowledging their health insurance needs and offerin
    * Generate initial welcome message based on form data
    */
   generateInitialMessage(formData) {
-    const { name, insuranceType, zipCode } = formData;
+    const { name, insuranceType = 'insurance', zipCode } = formData;
     
-    return `Hello ${name}! 🏥 I'm PolicyPal, your personal health insurance advisor. I see you're looking for health insurance in ${zipCode}. Health coverage is so important for protecting you and your family! Are you looking for individual coverage or family coverage? I'm here to help you find the perfect health insurance plan that fits your needs and budget.`;
+    const messages = {
+      auto: `Hello ${name}! 🚗 I'm PolicyPal, your personal auto insurance advisor. I see you're looking for auto insurance in ${zipCode}. I'd love to help you find the perfect coverage for your vehicle. What type of vehicle are you looking to insure?`,
+      health: `Hello ${name}! 🏥 I'm PolicyPal, your personal health insurance advisor. I see you're looking for health insurance in ${zipCode}. Health coverage is so important for protecting you and your family! Are you looking for individual coverage or family coverage?`,
+      life: `Hello ${name}! 🛡️ I'm PolicyPal, your personal life insurance advisor. I see you're looking for life insurance in ${zipCode}. Life insurance is such an important decision for protecting your loved ones. Are you looking for term life or whole life insurance?`,
+      home: `Hello ${name}! 🏠 I'm PolicyPal, your personal home insurance advisor. I see you're looking for home insurance in ${zipCode}. I'd be happy to help! What type of property are you looking to insure - house, condo, or apartment?`
+    };
+    
+    return messages[insuranceType] || `Hello ${name}! I'm PolicyPal, your personal insurance advisor. I'm here to help you find the right ${insuranceType} insurance coverage in ${zipCode}. What questions do you have?`;
   }
 
   /**
@@ -188,41 +198,62 @@ Start the conversation by acknowledging their health insurance needs and offerin
    */
   generateResponse(message, context, history) {
     const lowerMessage = message.toLowerCase();
-    const { name, zipCode } = context;
-    const insuranceType = 'health';
+    const { name, zipCode, insuranceType = 'insurance' } = context;
     
     // Price/Cost related queries
     if (this.containsKeywords(lowerMessage, ['price', 'cost', 'premium', 'rate', 'quote', 'how much'])) {
-      return this.generateHealthPriceResponse(name, zipCode);
+      if (insuranceType === 'health') {
+        return this.generateHealthPriceResponse(name, zipCode);
+      } else if (insuranceType === 'auto') {
+        return this.generateAutoPriceResponse(name, zipCode);
+      } else {
+        return this.generateGenericPriceResponse(name, zipCode, insuranceType);
+      }
     }
     
     // Coverage related queries
     if (this.containsKeywords(lowerMessage, ['coverage', 'cover', 'benefit', 'what does', 'include'])) {
-      return this.generateHealthCoverageResponse(name);
+      if (insuranceType === 'health') {
+        return this.generateHealthCoverageResponse(name);
+      } else if (insuranceType === 'auto') {
+        return this.generateAutoCoverageResponse(name);
+      } else {
+        return this.generateGenericCoverageResponse(name, insuranceType);
+      }
     }
     
     // Claims related queries
     if (this.containsKeywords(lowerMessage, ['claim', 'claims', 'accident', 'damage', 'file'])) {
-      return this.generateHealthClaimsResponse(name);
+      if (insuranceType === 'health') {
+        return this.generateHealthClaimsResponse(name);
+      } else {
+        return this.generateGenericClaimsResponse(name, insuranceType);
+      }
     }
     
     // Comparison queries
     if (this.containsKeywords(lowerMessage, ['compare', 'difference', 'better', 'vs', 'versus'])) {
-      return this.generateHealthComparisonResponse(name);
+      return this.generateComparisonResponse(name, insuranceType);
     }
     
     // Timeline queries
     if (this.containsKeywords(lowerMessage, ['when', 'start', 'begin', 'effective', 'activate'])) {
-      return this.generateHealthTimelineResponse(name);
+      return this.generateTimelineResponse(name, insuranceType);
     }
     
     // Requirements queries
     if (this.containsKeywords(lowerMessage, ['need', 'require', 'document', 'information', 'details'])) {
-      return this.generateHealthRequirementsResponse(name);
+      return this.generateRequirementsResponse(name, insuranceType);
     }
     
-    // Health insurance specific responses
-    return this.generateHealthSpecificResponse(lowerMessage, name);
+    // Insurance type specific responses
+    if (insuranceType === 'health') {
+      return this.generateHealthSpecificResponse(lowerMessage, name);
+    } else if (insuranceType === 'auto') {
+      return this.generateAutoSpecificResponse(lowerMessage, name);
+    } else {
+      return this.generateDefaultResponse(name, insuranceType);
+    }
   }
 
   /**

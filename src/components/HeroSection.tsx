@@ -8,6 +8,7 @@ export interface SimpleFormData {
   email: string;
   phone: string;
   pincode: string;
+  insuranceType: string;
   insuranceType?: string;
 }
 
@@ -29,11 +30,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
     setIsSubmitting(false);
-    // Always set insurance type to health
-    onFormSubmit({
-      ...data,
-      insuranceType: 'health'
-    });
+    onFormSubmit(data);
   };
 
   return (
@@ -93,9 +90,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
               </div>
             </motion.div>
             
-            {/* Main Headline */}
+          {/* Main Headline */}
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800 mb-6 leading-tight">
-              Find Better <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-pink-600">Health Insurance</span>
+              Find Better <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-green-600">Insurance</span>
               <br />in 30 Seconds
             </h1>
             
@@ -216,11 +213,48 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
                   </div>
                 </div>
 
+                {/* Insurance Type Selection */}
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">Insurance Type *</label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {[
+                      { id: 'auto', label: 'Auto', icon: '🚗' },
+                      { id: 'health', label: 'Health', icon: '🏥' },
+                      { id: 'life', label: 'Life', icon: '🛡️' },
+                      { id: 'home', label: 'Home', icon: '🏠' }
+                    ].map((type, index) => (
+                      <motion.label
+                        key={type.id}
+                        className={`cursor-pointer p-3 rounded-lg border-2 text-center transition-all duration-200 hover:shadow-md ${
+                          formData.insuranceType === type.id 
+                            ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                            : 'border-gray-200 bg-white hover:border-blue-300'
+                        }`}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                      >
+                        <input
+                          {...register('insuranceType', { required: 'Insurance type is required' })}
+                          type="radio"
+                          value={type.id}
+                          className="sr-only"
+                        />
+                        <div className="text-2xl mb-1">{type.icon}</div>
+                        <span className="font-medium text-sm">{type.label}</span>
+                      </motion.label>
+                    ))}
+                  </div>
+                  {errors.insuranceType && <span className="text-red-500 text-sm">{errors.insuranceType.message}</span>}
+                </div>
+
                 {/* Submit Button */}
                 <motion.button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 px-6 rounded-xl font-semibold flex items-center justify-center space-x-2 hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+                  className="w-full bg-gradient-to-r from-blue-500 to-green-500 text-white py-3 px-6 rounded-xl font-semibold flex items-center justify-center space-x-2 hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed mt-6"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -231,12 +265,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
                         animate={{ rotate: 360 }}
                         transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                       />
-                      <span>Getting Your Health Quote...</span>
+                      <span>Getting Your Quote...</span>
                     </>
                   ) : (
                     <>
                       <CheckCircle className="w-5 h-5" />
-                      <span>Get Health Insurance Quote</span>
+                      <span>Get Insurance Quote</span>
                     </>
                   )}
                 </motion.button>
