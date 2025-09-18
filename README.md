@@ -37,7 +37,7 @@ A comprehensive insurance management system built with React, TypeScript, Python
 **Option 1: Node.js Backend**
 ```bash
 npm install
-npm run dev:full
+npm run dev:node
 ```
 
 **Option 2: Python Backend**
