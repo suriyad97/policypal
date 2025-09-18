@@ -220,7 +220,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
                   <label className="block text-sm font-medium text-gray-700">Insurance Type *</label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {[
-                      { id: 'auto', label: 'Auto', icon: '🚗' },
+                      { id: 'savings', label: 'Savings', icon: '💰' },
                       { id: 'health', label: 'Health', icon: '🏥' },
                       { id: 'term_life', label: 'Life', icon: '🛡️' },
                       { id: 'home', label: 'Home', icon: '🏠' }
