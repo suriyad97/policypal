@@ -472,12 +472,6 @@ Now, let me help you with personalized insurance recommendations and answer any 
           timestamp: new Date(),
         };
 
-        const welcomeMessage: Message = {
-          id: '1',
-          type: 'bot',
-          content: response,
-          timestamp: new Date(),
-        };
 
         setMessages([acknowledgmentMessage, welcomeMessage]);
         
