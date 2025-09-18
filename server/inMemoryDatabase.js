@@ -13,46 +13,6 @@ export class InMemoryDatabase {
   // Initialize with sample insurance products
   initializeProducts() {
     return [
-      // AUTO INSURANCE
-      {
-        product_id: 1,
-        product_name: 'Comprehensive Car Cover',
-        product_type: 'auto',
-        target_gender: 'all',
-        min_age: 18,
-        max_age: 70,
-        premium_amount: 8500.00,
-        coverage_details: 'Complete car insurance with zero depreciation and roadside assistance',
-        provider_name: 'HDFC ERGO',
-        features: { zero_depreciation: true, roadside_assistance: true, engine_protection: true },
-        is_active: true
-      },
-      {
-        product_id: 2,
-        product_name: 'Young Driver Special',
-        product_type: 'auto',
-        target_gender: 'all',
-        min_age: 18,
-        max_age: 30,
-        premium_amount: 12000.00,
-        coverage_details: 'Higher premium for young drivers with comprehensive coverage and driver training',
-        provider_name: 'ICICI Lombard',
-        features: { driver_training: true, accident_forgiveness: true, new_car_replacement: true },
-        is_active: true
-      },
-      {
-        product_id: 3,
-        product_name: 'Women Driver Advantage',
-        product_type: 'auto',
-        target_gender: 'female',
-        min_age: 25,
-        max_age: 60,
-        premium_amount: 7500.00,
-        coverage_details: 'Special rates for women drivers with enhanced safety features',
-        provider_name: 'Bajaj Allianz',
-        features: { women_discount: true, safety_features: true, personal_accident: true },
-        is_active: true
-      },
 
       // HEALTH INSURANCE
       {
