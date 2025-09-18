@@ -64,7 +64,7 @@ export class ChatService {
     const insuranceContext = {
       auto: `The customer is looking for auto insurance for their vehicle.`,
       health: `The customer is looking for health insurance.`,
-      life: `The customer is looking for life insurance coverage.`,
+      term_life: `The customer is looking for life insurance coverage.`,
       home: `The customer is looking for home insurance coverage.`
     };
 
@@ -72,8 +72,6 @@ export class ChatService {
 
 Customer Details:
 - Name: ${formData.name}
-- Location: ${formData.zipCode}
-- Age: ${formData.age}
 - Insurance Type: ${formData.insuranceType}
 ${customerId ? `- Customer ID: ${customerId}` : ''}
 

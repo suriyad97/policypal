@@ -278,6 +278,7 @@ export class DatabaseService {
   mapInsuranceType(frontendType) {
     const mapping = {
       'car': 'auto',
+      'life': 'term_life',
       'term': 'term_life',
       'auto': 'auto',
       'health': 'health',

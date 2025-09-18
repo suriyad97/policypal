@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Bot, User, Sparkles, Shield, Phone, Mail, MapPin, Calendar, CheckCircle, Star, Award, Users } from 'lucide-react';
-import { FormData } from './SinglePageForm';
+import { SimpleFormData } from './HeroSection';
 
 interface Message {
   id: string;
@@ -34,7 +34,7 @@ interface InsuranceProduct {
 }
 
 interface ChatInterfaceProps {
-  formData: FormData;
+  formData: SimpleFormData & { zipCode: string; insuranceType: string };
   onBack: () => void;
 }
 
@@ -269,13 +269,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }
   }, [messages]);
 
   // Generate system prompt based on form data
-  const generateSystemPrompt = (formData: FormData, products: InsuranceProduct[], customer: any) => {
+  const generateSystemPrompt = (formData: SimpleFormData & { zipCode: string; insuranceType: string }, products: InsuranceProduct[], customer: any) => {
     const insuranceContext = {
       auto: `The customer is looking for auto insurance for their ${customer.vehicle_model} (${customer.vehicle_year}) with registration number ${customer.vehicle_number}.`,
-      health: `The customer is a ${customer.age} year old ${customer.gender} looking for health insurance. ${customer.medical_history ? `Medical history: ${customer.medical_history}` : 'No pre-existing conditions mentioned.'}`,
-      term_life: `The customer is a ${customer.age} year old ${customer.gender} looking for term life insurance with ${customer.coverage_amount} coverage for ${customer.relationship}.`,
-      savings: `The customer is a ${customer.age} year old ${customer.gender} looking for a savings plan with ${customer.monthly_investment} monthly investment for ${customer.investment_goal}.`,
-      home: `The customer is a ${customer.age} year old ${customer.gender} looking for home insurance.`
+      health: `The customer is ${customer.age ? `a ${customer.age} year old` : 'an individual'} ${customer.gender || ''} looking for health insurance. ${customer.medical_history ? `Medical history: ${customer.medical_history}` : 'No pre-existing conditions mentioned.'}`,
+      term_life: `The customer is ${customer.age ? `a ${customer.age} year old` : 'an individual'} ${customer.gender || ''} looking for term life insurance ${customer.coverage_amount ? `with ${customer.coverage_amount} coverage` : ''} ${customer.relationship ? `for ${customer.relationship}` : ''}.`,
+      savings: `The customer is ${customer.age ? `a ${customer.age} year old` : 'an individual'} ${customer.gender || ''} looking for a savings plan ${customer.monthly_investment ? `with ${customer.monthly_investment} monthly investment` : ''} ${customer.investment_goal ? `for ${customer.investment_goal}` : ''}.`,
+      home: `The customer is ${customer.age ? `a ${customer.age} year old` : 'an individual'} ${customer.gender || ''} looking for home insurance.`
     };
 
     const availableProducts = products.map(p => 

@@ -8,7 +8,6 @@ export interface SimpleFormData {
   email: string;
   phone: string;
   pincode: string;
-  insuranceType: string;
   insuranceType?: string;
 }
 
@@ -223,7 +222,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
                     {[
                       { id: 'auto', label: 'Auto', icon: '🚗' },
                       { id: 'health', label: 'Health', icon: '🏥' },
-                      { id: 'life', label: 'Life', icon: '🛡️' },
+                      { id: 'term_life', label: 'Life', icon: '🛡️' },
                       { id: 'home', label: 'Home', icon: '🏠' }
                     ].map((type, index) => (
                       <motion.label
