@@ -272,23 +272,11 @@ Start the conversation by acknowledging their health insurance needs and offerin
    */
   generateHealthSpecificResponse(message, name) {
     if (message.includes('family') || message.includes('spouse') || message.includes('children')) {
-      return `${name}, family health insurance is a great choice! Family floater plans cover your entire family under one policy with shared sum insured. This is usually more economical than individual policies. How many family members would you like to include, and what's your preferred sum insured amount?`;
-    }
-    
-    if (message.includes('individual') || message.includes('personal') || message.includes('myself')) {
-      return `${name}, individual health insurance gives you dedicated coverage with your own sum insured. This ensures your coverage isn't shared with others. What sum insured are you considering, and do you have any specific health concerns or preferred hospitals?`;
-    }
-    
-    if (message.includes('pre-existing') || message.includes('medical condition') || message.includes('diabetes') || message.includes('hypertension')) {
-      return `${name}, pre-existing conditions are covered after waiting periods (typically 2-4 years). Some insurers offer shorter waiting periods or immediate coverage for certain conditions. It's important to declare all conditions honestly. What specific conditions are you concerned about?`;
-    }
-    
-    if (message.includes('hospital') || message.includes('network') || message.includes('cashless')) {
-      return `${name}, network hospitals are crucial for cashless treatment. Most insurers have 5,000+ network hospitals across India. You can get treatment without paying upfront at these hospitals. Would you like me to check which hospitals in your area are covered by different insurers?`;
+      return `${name}, family health insurance is a great choice! Family floater plans cover your entire family under one policy with shared sum insured. This is usually more economical than individual policies. How many family members would you like to include?`;
     }
     
     // Default helpful response
-    return this.generateDefaultResponse(insuranceType, name);
+    return this.generateDefaultResponse('health', name);
   }
 
   /**
@@ -296,6 +284,26 @@ Start the conversation by acknowledging their health insurance needs and offerin
    */
   containsKeywords(message, keywords) {
     return keywords.some(keyword => message.includes(keyword));
+  }
+
+  /**
+   * Generate price-related responses
+   */
+  generatePriceResponse(insuranceType, name, zipCode) {
+    const responses = {
+      auto: `Great question about pricing, ${name}! Auto insurance rates in ${zipCode} typically range from ₹5,000 to ₹15,000 annually, depending on your vehicle, driving history, and coverage level. I can help you get personalized quotes from multiple insurers. Would you like me to show you some specific options?`,
+      
+      health: `${name}, health insurance premiums vary based on age, coverage, and location. In ${zipCode}, individual plans typically start from ₹8,000 annually, while family floater plans range from ₹12,000 to ₹25,000. Would you like me to find plans that fit your budget?`,
+      
+      term_life: `${name}, term life insurance is very affordable! Based on your profile, premiums typically start from ₹6,000 annually for ₹10 lakh coverage. The exact rate depends on your age, health, and coverage amount. Shall I show you some specific term life options?`,
+      
+      savings: `${name}, our savings plans offer flexible premium options starting from ₹2,500 monthly. The returns and benefits depend on your investment goals and time horizon. Would you like me to explain the different savings plan options available?`,
+      
+      home: `${name}, home insurance in ${zipCode} typically costs ₹3,000 to ₹8,000 annually, depending on your property value and coverage needs. This is a small price for protecting your biggest investment! Would you like a personalized quote?`
+    };
+    
+    return responses[insuranceType] || 
+           `${name}, insurance pricing varies based on many factors including your specific needs and location in ${zipCode}. I'd be happy to get you personalized quotes from multiple insurers. What specific coverage are you most interested in?`;
   }
 
   /**
