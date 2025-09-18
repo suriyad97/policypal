@@ -468,21 +468,6 @@ Now, let me help you with personalized insurance recommendations and answer any 
         const welcomeMessage: Message = {
           id: '1',
           type: 'bot',
-        // Create acknowledgment message first
-        const acknowledgmentMessage: Message = {
-          id: '0',
-          type: 'bot',
-          content: `Thank you, ${formData.name}! 🎉 Your information has been successfully submitted. I appreciate your interest in finding better insurance coverage!
-
-📧 Email: ${formData.email}
-📱 Phone: ${formData.phone}  
-📍 Pincode: ${formData.pincode}
-✅ Status: Submitted
-
-Now, let me help you with personalized insurance recommendations and answer any questions you have!`,
-          timestamp: new Date(),
-        };
-
           content: response,
           timestamp: new Date(),
         };
