@@ -1,6 +1,97 @@
+// LLM Configuration from environment variables
+const LLM_CONFIG = {
+  endpoint: process.env.VITE_LLM_ENDPOINT || '',
+  subscriptionKey: process.env.VITE_LLM_SUBSCRIPTION_KEY || '',
+  deploymentName: process.env.VITE_LLM_DEPLOYMENT_NAME || '', 
+  modelName: process.env.VITE_LLM_MODEL_NAME || 'gpt-4o-mini',
+  apiVersion: process.env.VITE_LLM_API_VERSION || '2024-02-15-preview'
+};
+
 export class ChatService {
   constructor() {
     this.sessions = new Map();
+  }
+
+  /**
+   * Call LLM API for intelligent responses
+   */
+  async callLLMAPI(messages) {
+    // Check if LLM is configured
+    if (!LLM_CONFIG.endpoint || !LLM_CONFIG.subscriptionKey) {
+      console.warn('LLM API not configured, using fallback response');
+      throw new Error('LLM API not configured');
+    }
+
+    try {
+      const response = await fetch(LLM_CONFIG.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${LLM_CONFIG.subscriptionKey}`,
+        },
+        body: JSON.stringify({
+          messages: messages,
+          max_tokens: 500,
+          temperature: 0.7,
+          model: LLM_CONFIG.modelName || LLM_CONFIG.deploymentName,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Handle different API response formats
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        return data.choices[0].message.content;
+      } else if (data.content) {
+        return data.content;
+      } else {
+        throw new Error('Unexpected API response format');
+      }
+    } catch (error) {
+      console.error('LLM API Error:', error);
+      throw error; // Re-throw to be handled by caller
+    }
+  }
+
+  /**
+   * Generate system prompt based on form data and context
+   */
+  generateSystemPrompt(formData, customerId = null) {
+    const insuranceContext = {
+      auto: `The customer is looking for auto insurance.`,
+      health: `The customer is looking for health insurance.`,
+      term_life: `The customer is looking for term life insurance.`,
+      term: `The customer is looking for term life insurance.`,
+      savings: `The customer is looking for a savings plan.`,
+      home: `The customer is looking for home insurance.`
+    };
+
+    return `You are PolicyPal, a professional and friendly insurance advisor. You are helping ${formData.name} from ${formData.zipCode} with their insurance needs.
+
+Customer Details:
+- Name: ${formData.name}
+- Location: ${formData.zipCode}
+- Age: ${formData.age}
+- Insurance Type: ${formData.insuranceType}
+${customerId ? `- Customer ID: ${customerId}` : ''}
+
+Context: ${insuranceContext[formData.insuranceType] || 'General insurance inquiry.'}
+
+Instructions:
+1. Be professional, helpful, and knowledgeable about insurance
+2. Ask relevant follow-up questions to better understand their needs
+3. Provide personalized recommendations
+4. Explain insurance terms in simple language
+5. Focus on finding the best coverage for their specific situation
+6. Keep responses concise but informative (max 150 words)
+7. Show empathy and build trust
+8. Use a friendly, conversational tone
+
+Start the conversation by acknowledging their specific insurance needs and offering to help.`;
   }
 
   /**
@@ -16,8 +107,20 @@ export class ChatService {
         customerId
       });
 
-      // Generate initial message based on insurance type and customer data
-      const initialMessage = this.generateInitialMessage(formData);
+      // Try to use LLM for intelligent response
+      let initialMessage;
+      try {
+        const systemPrompt = this.generateSystemPrompt(formData, customerId);
+        const messages = [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: 'Hello, I would like to get started with my insurance quote.' }
+        ];
+        initialMessage = await this.callLLMAPI(messages);
+      } catch (llmError) {
+        console.warn('LLM API not available, using fallback response:', llmError);
+        // Fallback to rule-based response
+        initialMessage = this.generateInitialMessage(formData);
+      }
       
       // Add to session history
       const session = this.sessions.get(sessionId);
@@ -45,8 +148,23 @@ export class ChatService {
       // Add user message to history
       session.history.push({ role: 'user', content: message, timestamp: new Date() });
 
-      // Generate response based on message content and context
-      const response = this.generateResponse(message, session.context, session.history);
+      // Try to use LLM for intelligent response
+      let response;
+      try {
+        const systemPrompt = this.generateSystemPrompt(session.context, session.customerId);
+        const conversationHistory = [
+          { role: 'system', content: systemPrompt },
+          ...session.history.map(msg => ({
+            role: msg.role === 'user' ? 'user' : 'assistant',
+            content: msg.content
+          }))
+        ];
+        response = await this.callLLMAPI(conversationHistory);
+      } catch (llmError) {
+        console.warn('LLM API failed, using rule-based response:', llmError);
+        // Fallback to rule-based response
+        response = this.generateResponse(message, session.context, session.history);
+      }
 
       // Add bot response to history
       session.history.push({ role: 'assistant', content: response, timestamp: new Date() });
