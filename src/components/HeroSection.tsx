@@ -8,6 +8,7 @@ export interface SimpleFormData {
   email: string;
   phone: string;
   pincode: string;
+  insuranceType?: string;
 }
 
 interface HeroSectionProps {
@@ -17,13 +18,22 @@ interface HeroSectionProps {
 export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
   const { register, handleSubmit, formState: { errors } } = useForm<SimpleFormData>();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  
+  // Set default insurance type to health
+  React.useEffect(() => {
+    // This ensures the form data includes health as the insurance type
+  }, []);
 
   const onSubmit = async (data: SimpleFormData) => {
     setIsSubmitting(true);
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
     setIsSubmitting(false);
-    onFormSubmit(data);
+    // Always set insurance type to health
+    onFormSubmit({
+      ...data,
+      insuranceType: 'health'
+    });
   };
 
   return (
@@ -48,7 +58,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
           scale: [1, 0.9, 1],
         }}
         transition={{
-          duration: 8,
+                    className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none transition-all bg-white"
           repeat: Infinity,
           ease: "easeInOut",
         }}
@@ -73,7 +83,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
               <div className="bg-white rounded-2xl p-4 shadow-xl border border-gray-100">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg">
-                    <Shield className="w-7 h-7 text-white" />
+                    className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none transition-all bg-white"
                   </div>
                   <div className="text-left">
                     <h3 className="text-2xl font-bold text-gray-800">PolicyPal</h3>
@@ -85,7 +95,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
             
             {/* Main Headline */}
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800 mb-6 leading-tight">
-              Find Better <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-600">Insurance</span>
+              Find Better <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-pink-600">Health Insurance</span>
               <br />in 30 Seconds
             </h1>
             
@@ -98,9 +108,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
             >
               {/* Form Header */}
               <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">Get Started Today</h2>
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">Get Your Health Insurance Quote</h2>
                 <p className="text-gray-600">
-                  Just a few details to get started
+                  Protect your health with the right coverage
                 </p>
               </div>
 
@@ -210,7 +220,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
                 <motion.button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-gradient-to-r from-blue-500 to-green-500 text-white py-3 px-6 rounded-xl font-semibold flex items-center justify-center space-x-2 hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+                  className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 px-6 rounded-xl font-semibold flex items-center justify-center space-x-2 hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed mt-6"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -221,12 +231,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
                         animate={{ rotate: 360 }}
                         transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                       />
-                      <span>Submitting...</span>
+                      <span>Getting Your Health Quote...</span>
                     </>
                   ) : (
                     <>
                       <CheckCircle className="w-5 h-5" />
-                      <span>Submit</span>
+                      <span>Get Health Insurance Quote</span>
                     </>
                   )}
                 </motion.button>
