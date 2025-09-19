@@ -2,12 +2,31 @@ import { DatabaseService } from './databaseService.js';
 
 // LLM Configuration from environment variables
 const LLM_CONFIG = {
-  endpoint: process.env.AZURE_OPENAI_ENDPOINT || process.env.LLM_ENDPOINT || process.env.VITE_LLM_ENDPOINT || '',
+  endpoint: buildAzureOpenAIEndpoint(),
   subscriptionKey: process.env.AZURE_OPENAI_SUBSCRIPTION_KEY || process.env.LLM_SUBSCRIPTION_KEY || process.env.VITE_LLM_SUBSCRIPTION_KEY || '',
   deploymentName: process.env.AZURE_OPENAI_DEPLOYMENT || process.env.LLM_DEPLOYMENT_NAME || process.env.VITE_LLM_DEPLOYMENT_NAME || '', 
   modelName: process.env.AZURE_OPENAI_DEPLOYMENT || process.env.LLM_MODEL_NAME || process.env.VITE_LLM_MODEL_NAME || 'gpt-4o-mini',
   apiVersion: process.env.AZURE_OPENAI_API_VERSION || process.env.LLM_API_VERSION || process.env.VITE_LLM_API_VERSION || '2024-02-15-preview'
 };
+
+/**
+ * Build the complete Azure OpenAI endpoint URL
+ */
+function buildAzureOpenAIEndpoint() {
+  const baseUrl = process.env.AZURE_OPENAI_ENDPOINT || process.env.LLM_ENDPOINT || process.env.VITE_LLM_ENDPOINT || '';
+  const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT || process.env.LLM_DEPLOYMENT_NAME || process.env.VITE_LLM_DEPLOYMENT_NAME || '';
+  const apiVersion = process.env.AZURE_OPENAI_API_VERSION || process.env.LLM_API_VERSION || process.env.VITE_LLM_API_VERSION || '2024-02-15-preview';
+  
+  if (!baseUrl || !deploymentName) {
+    return '';
+  }
+  
+  // Remove trailing slash from base URL
+  const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+  
+  // Build the complete endpoint
+  return `${cleanBaseUrl}/openai/deployments/${deploymentName}/chat/completions?api-version=${apiVersion}`;
+}
 
 export class ChatService {
   constructor(databaseService = null) {
