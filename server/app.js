@@ -13,7 +13,7 @@ app.use(express.json());
 
 // Initialize services
 const dbService = new DatabaseService();
-const chatService = new ChatService();
+const chatService = new ChatService(dbService);
 
 // Health check endpoint
 app.get('/api/health', async (req, res) => {

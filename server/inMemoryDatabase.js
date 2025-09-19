@@ -1,5 +1,5 @@
 // In-Memory Database for PolicyPal
-// This provides fallback functionality when Azure SQL Database is unavailable
+// This provides fallback functionality when an external SQL database is unavailable
 
 export class InMemoryDatabase {
   constructor() {

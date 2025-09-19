@@ -2,35 +2,62 @@ import sql from 'mssql';
 import { InMemoryDatabase } from './inMemoryDatabase.js';
 import 'dotenv/config';
 
-// Azure SQL Database configuration
-const dbConfig = {
-  server: process.env.AZURE_SQL_SERVER || 'ml-lms-db.database.windows.net',
-  database: process.env.AZURE_SQL_DATABASE || 'lms-db',
-  user: process.env.AZURE_SQL_USERNAME || 'lmsadmin-001',
-  password: process.env.AZURE_SQL_PASSWORD || 'Creative@2025',
-  options: {
-    encrypt: true, // Use encryption for Azure SQL
-    trustServerCertificate: false, // For Azure SQL
-    enableArithAbort: true,
-    requestTimeout: 30000,
-    connectionTimeout: 30000
-  },
-  pool: {
-    max: 10,
-    min: 0,
-    idleTimeoutMillis: 30000
+// Shared SQL configuration helpers
+const getEnvBool = (value, defaultValue) => {
+  if (value === undefined) {
+    return defaultValue;
   }
+  return value.toLowerCase() === 'true';
 };
+
+const getEnvInt = (value, defaultValue) => {
+  if (value === undefined) {
+    return defaultValue;
+  }
+  const parsed = Number.parseInt(value, 10);
+  return Number.isNaN(parsed) ? defaultValue : parsed;
+};
+
+const rawDbConfig = {
+  server: process.env.DB_SERVER || process.env.SQL_SERVER,
+  database: process.env.DB_NAME || process.env.SQL_DATABASE,
+  user: process.env.DB_USER || process.env.SQL_USERNAME,
+  password: process.env.DB_PASSWORD || process.env.SQL_PASSWORD
+};
+
+const isSqlConfigured = Object.values(rawDbConfig).every(Boolean);
+
+const dbConfig = isSqlConfigured
+  ? {
+      ...rawDbConfig,
+      options: {
+        encrypt: getEnvBool(process.env.SQL_ENCRYPT, true),
+        trustServerCertificate: getEnvBool(process.env.SQL_TRUST_SERVER_CERT, false),
+        enableArithAbort: true,
+        requestTimeout: getEnvInt(process.env.SQL_REQUEST_TIMEOUT, 30000),
+        connectionTimeout: getEnvInt(process.env.SQL_CONNECTION_TIMEOUT, 30000)
+      },
+      pool: {
+        max: getEnvInt(process.env.SQL_POOL_MAX, 10),
+        min: getEnvInt(process.env.SQL_POOL_MIN, 0),
+        idleTimeoutMillis: getEnvInt(process.env.SQL_POOL_IDLE_TIMEOUT, 30000)
+      }
+    }
+  : null;
 
 // Database connection pool
 let pool = null;
 
 async function getConnection() {
+  if (!dbConfig) {
+    throw new Error('SQL database configuration is incomplete.');
+  }
+
   if (!pool) {
     try {
       pool = new sql.ConnectionPool(dbConfig);
       await pool.connect();
-      console.log('✅ Connected to Azure SQL Database');
+      console.log('✅ Connected to SQL database');
     } catch (error) {
       console.error('❌ Database connection failed:', error.message);
       throw error;
@@ -43,7 +70,11 @@ async function getConnection() {
 export class DatabaseService {
   constructor() {
     this.inMemoryDb = new InMemoryDatabase();
-    this.useInMemory = false;
+    this.useInMemory = !isSqlConfigured;
+
+    if (this.useInMemory) {
+      console.warn('SQL database credentials are not configured. Using in-memory storage.');
+    }
   }
 
   

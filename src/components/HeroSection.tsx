@@ -82,7 +82,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
               <div className="bg-white rounded-2xl p-4 shadow-xl border border-gray-100">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg">
-                    className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none transition-all bg-white"
+                    <Shield className="text-white w-6 h-6" />
                   </div>
                   <div className="text-left">
                     <h3 className="text-2xl font-bold text-gray-800">PolicyPal</h3>
@@ -106,12 +106,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
               transition={{ duration: 0.8, delay: 0.5 }}
             >
               {/* Form Header */}
-              <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">Submit</h2>
-                <p className="text-gray-600">
-                  Protect your health with the right coverage
-                </p>
-              </div>
+     
 
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
                 {/* Name Field */}
@@ -272,7 +267,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onFormSubmit }) => {
                   ) : (
                     <>
                       <CheckCircle className="w-5 h-5" />
-                      <span>Get Insurance Quote</span>
+                      <span>Submit</span>
                     </>
                   )}
                 </motion.button>

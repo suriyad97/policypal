@@ -209,28 +209,41 @@ app.post('/api/chat/initialize', (req, res) => {
 app.post('/api/chat/message', (req, res) => {
   try {
     const { sessionId, message } = req.body;
-    
+    // Debug log incoming payload
+    console.log('Incoming /api/chat/message:', { sessionId, message });
+
     // Get session data
     const session = sessions.get(sessionId);
     if (!session) {
+      console.error('Session not found for sessionId:', sessionId);
       return res.status(404).json({
         success: false,
         error: 'Session not found'
       });
     }
-    
+
     // Add user message to history
     session.history.push({ role: 'user', content: message });
-    
+
     // Generate response
-    const response = generateResponse(message, session.context, session.history);
-    
+    let response;
+    try {
+      response = generateResponse(message, session.context, session.history);
+    } catch (genErr) {
+      console.error('Error in generateResponse:', genErr);
+      return res.status(500).json({
+        success: false,
+        error: 'Error generating response',
+        details: genErr.message || genErr
+      });
+    }
+
     // Add bot response to history
     session.history.push({ role: 'assistant', content: response });
-    
+
     // Update session
     sessions.set(sessionId, session);
-    
+
     res.json({
       success: true,
       message: response
@@ -239,7 +252,8 @@ app.post('/api/chat/message', (req, res) => {
     console.error('Message error:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to process message'
+      error: 'Failed to process message',
+      details: error.message || error
     });
   }
 });

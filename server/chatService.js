@@ -1,15 +1,19 @@
+import { DatabaseService } from './databaseService.js';
+
 // LLM Configuration from environment variables
 const LLM_CONFIG = {
-  endpoint: process.env.VITE_LLM_ENDPOINT || '',
-  subscriptionKey: process.env.VITE_LLM_SUBSCRIPTION_KEY || '',
-  deploymentName: process.env.VITE_LLM_DEPLOYMENT_NAME || '', 
-  modelName: process.env.VITE_LLM_MODEL_NAME || 'gpt-4o-mini',
-  apiVersion: process.env.VITE_LLM_API_VERSION || '2024-02-15-preview'
+  endpoint: process.env.AZURE_OPENAI_ENDPOINT || process.env.LLM_ENDPOINT || process.env.VITE_LLM_ENDPOINT || '',
+  subscriptionKey: process.env.AZURE_OPENAI_SUBSCRIPTION_KEY || process.env.LLM_SUBSCRIPTION_KEY || process.env.VITE_LLM_SUBSCRIPTION_KEY || '',
+  deploymentName: process.env.AZURE_OPENAI_DEPLOYMENT || process.env.LLM_DEPLOYMENT_NAME || process.env.VITE_LLM_DEPLOYMENT_NAME || '', 
+  modelName: process.env.AZURE_OPENAI_DEPLOYMENT || process.env.LLM_MODEL_NAME || process.env.VITE_LLM_MODEL_NAME || 'gpt-4o-mini',
+  apiVersion: process.env.AZURE_OPENAI_API_VERSION || process.env.LLM_API_VERSION || process.env.VITE_LLM_API_VERSION || '2024-02-15-preview'
 };
 
 export class ChatService {
-  constructor() {
+  constructor(databaseService = null) {
     this.sessions = new Map();
+    this.databaseService = databaseService || new DatabaseService();
+    this.recommendationBatchSize = 2;
   }
 
   /**
@@ -60,13 +64,28 @@ export class ChatService {
   /**
    * Generate system prompt based on form data and context
    */
-  generateSystemPrompt(formData, customerId = null) {
+  generateSystemPrompt(formData, customerId = null, productRecommendations = []) {
     const insuranceContext = {
       auto: `The customer is looking for auto insurance for their vehicle.`,
       health: `The customer is looking for health insurance.`,
       term_life: `The customer is looking for life insurance coverage.`,
       home: `The customer is looking for home insurance coverage.`
     };
+
+    const productLines = Array.isArray(productRecommendations)
+      ? productRecommendations.slice(0, 3).map((product, index) => {
+          const premium = typeof product.premium_amount === 'number'
+            ? `₹${product.premium_amount.toLocaleString('en-IN')}/year`
+            : product.premium_amount;
+          const provider = product.provider_name ? ` by ${product.provider_name}` : '';
+          const coverage = product.coverage_details ? ` — ${product.coverage_details}` : '';
+          return `${index + 1}. ${product.product_name}${provider} (${premium})${coverage}`;
+        })
+      : [];
+
+    const productsOverview = productLines.length
+      ? '\nRecommended Plans:\n' + productLines.join('\n') + '\n'
+      : '';
 
     return `You are PolicyPal, a professional and friendly insurance advisor. You are helping ${formData.name} from ${formData.zipCode} with their insurance needs.
 
@@ -76,7 +95,7 @@ Customer Details:
 ${customerId ? `- Customer ID: ${customerId}` : ''}
 
 Context: ${insuranceContext[formData.insuranceType] || 'The customer is looking for insurance coverage.'}
-
+${productsOverview}
 Instructions:
 1. Be professional, helpful, and knowledgeable about ${formData.insuranceType} insurance
 2. Ask relevant follow-up questions to better understand their needs
@@ -95,18 +114,22 @@ Start the conversation by acknowledging their ${formData.insuranceType} insuranc
    */
   async initializeChat(sessionId, formData, customerId = null) {
     try {
-      // Store session data
-      this.sessions.set(sessionId, {
-        formData,
+      const context = formData ? { ...formData } : {};
+      const sessionData = {
+        formData: { ...context },
         history: [],
-        context: formData,
-        customerId
-      });
+        context,
+        customerId,
+        productRecommendations: [],
+        suggestedProductIndex: 0
+      };
 
-      // Try to use LLM for intelligent response
+      await this.refreshProductRecommendations(sessionData, { force: true });
+      this.sessions.set(sessionId, sessionData);
+
       let initialMessage;
       try {
-        const systemPrompt = this.generateSystemPrompt(formData, customerId);
+        const systemPrompt = this.generateSystemPrompt(sessionData.context, customerId, sessionData.productRecommendations);
         const messages = [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: 'Hello, I would like to get started with my insurance quote.' }
@@ -115,9 +138,16 @@ Start the conversation by acknowledging their ${formData.insuranceType} insuranc
       } catch (llmError) {
         console.warn('LLM API not available, using fallback response:', llmError);
         // Fallback to rule-based response
-        initialMessage = this.generateInitialMessage(formData);
+        initialMessage = this.generateInitialMessage(sessionData.context);
       }
-      
+
+      if (sessionData.productRecommendations?.length) {
+        initialMessage = await this.addProductRecommendations(sessionId, initialMessage, {
+          includeFollowUp: true,
+          count: 1
+        });
+      }
+
       // Add to session history
       const session = this.sessions.get(sessionId);
       session.history.push({ role: 'assistant', content: initialMessage, timestamp: new Date() });
@@ -141,13 +171,24 @@ Start the conversation by acknowledging their ${formData.insuranceType} insuranc
         throw new Error('Session not found. Please refresh and try again.');
       }
 
+      let forceProductRefresh = false;
+      if (formData && typeof formData === 'object') {
+        const watchedFields = ['insuranceType', 'age', 'lifeAge', 'savingsAge', 'gender', 'lifeGender', 'savingsGender'];
+        forceProductRefresh = watchedFields.some(field => formData[field] && formData[field] !== session.context?.[field]);
+        session.formData = { ...session.formData, ...formData };
+        session.context = { ...session.context, ...formData };
+      }
+
+      await this.refreshProductRecommendations(session, { force: forceProductRefresh });
+
       // Add user message to history
       session.history.push({ role: 'user', content: message, timestamp: new Date() });
 
       // Try to use LLM for intelligent response
       let response;
+      let usedLLM = true;
       try {
-        const systemPrompt = this.generateSystemPrompt(session.context, session.customerId);
+        const systemPrompt = this.generateSystemPrompt(session.context, session.customerId, session.productRecommendations);
         const conversationHistory = [
           { role: 'system', content: systemPrompt },
           ...session.history.map(msg => ({
@@ -157,9 +198,17 @@ Start the conversation by acknowledging their ${formData.insuranceType} insuranc
         ];
         response = await this.callLLMAPI(conversationHistory);
       } catch (llmError) {
+        usedLLM = false;
         console.warn('LLM API failed, using rule-based response:', llmError);
         // Fallback to rule-based response
         response = this.generateResponse(message, session.context, session.history);
+      }
+
+      if (session.productRecommendations?.length) {
+        response = await this.addProductRecommendations(sessionId, response, {
+          includeFollowUp: true,
+          count: usedLLM ? 1 : this.recommendationBatchSize
+        });
       }
 
       // Add bot response to history
@@ -178,8 +227,8 @@ Start the conversation by acknowledging their ${formData.insuranceType} insuranc
   /**
    * Generate initial welcome message based on form data
    */
-  generateInitialMessage(formData) {
-    const { name, insuranceType = 'insurance', zipCode } = formData;
+  generateInitialMessage(formData = {}) {
+    const { name = 'there', insuranceType = 'insurance', zipCode = 'your area' } = formData;
     
     const messages = {
       auto: `Hello ${name}! 🚗 I'm PolicyPal, your personal auto insurance advisor. I see you're looking for auto insurance in ${zipCode}. I'd love to help you find the perfect coverage for your vehicle. What type of vehicle are you looking to insure?`,
@@ -252,6 +301,150 @@ Start the conversation by acknowledging their ${formData.insuranceType} insuranc
     } else {
       return this.generateDefaultResponse(name, insuranceType);
     }
+  }
+
+  /**
+   * Refresh cached product recommendations for a session
+   */
+  async refreshProductRecommendations(session, { force = false } = {}) {
+    if (!session || !this.databaseService) {
+      return;
+    }
+
+    if (!session.context?.insuranceType) {
+      return;
+    }
+
+    const shouldFetch = force || !Array.isArray(session.productRecommendations) || session.productRecommendations.length === 0;
+
+    if (!shouldFetch) {
+      return;
+    }
+
+    const products = await this.fetchProductRecommendations(session.context);
+    session.productRecommendations = products;
+    session.suggestedProductIndex = 0;
+  }
+
+  /**
+   * Fetch product recommendations using the configured database service
+   */
+  async fetchProductRecommendations(context = {}) {
+    if (!this.databaseService || typeof this.databaseService.getInsuranceProducts !== 'function') {
+      return [];
+    }
+
+    try {
+      const insuranceType = context?.insuranceType
+        ? (typeof this.databaseService.mapInsuranceType === 'function'
+            ? this.databaseService.mapInsuranceType(context.insuranceType)
+            : context.insuranceType.toLowerCase())
+        : null;
+
+      if (!insuranceType) {
+        return [];
+      }
+
+      const { age, gender } = this.extractDemographicInfo(context);
+      const products = await this.databaseService.getInsuranceProducts(insuranceType, age, gender);
+      return Array.isArray(products) ? products : [];
+    } catch (error) {
+      console.warn('Unable to fetch product recommendations:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Extract demographic info from context for product filtering
+   */
+  extractDemographicInfo(context = {}) {
+    const ageKeys = ['age', 'lifeAge', 'savingsAge', 'healthAge', 'autoAge', 'homeAge'];
+    const genderKeys = ['gender', 'lifeGender', 'savingsGender', 'healthGender'];
+
+    let age;
+    for (const key of ageKeys) {
+      if (context[key]) {
+        age = context[key];
+        break;
+      }
+    }
+
+    let gender;
+    for (const key of genderKeys) {
+      if (context[key]) {
+        gender = context[key];
+        break;
+      }
+    }
+
+    return { age, gender };
+  }
+
+  /**
+   * Format a product recommendation into a concise summary
+   */
+  formatProductSummary(product) {
+    if (!product) {
+      return '';
+    }
+
+    const provider = product.provider_name ? ` by ${product.provider_name}` : '';
+    const premium = typeof product.premium_amount === 'number'
+      ? `₹${product.premium_amount.toLocaleString('en-IN')}/year`
+      : product.premium_amount;
+    const coverage = product.coverage_details ? ` ${product.coverage_details}` : '';
+
+    return `- ${product.product_name}${provider} — approx ${premium}.${coverage}`.trim();
+  }
+
+  /**
+   * Retrieve the next batch of product suggestions for a session
+   */
+  getNextProductSuggestions(session, count) {
+    if (!session || !Array.isArray(session.productRecommendations) || session.productRecommendations.length === 0) {
+      return [];
+    }
+
+    const startIndex = session.suggestedProductIndex || 0;
+    const suggestions = session.productRecommendations.slice(startIndex, startIndex + Math.max(1, count));
+    session.suggestedProductIndex = startIndex + suggestions.length;
+    return suggestions;
+  }
+
+  /**
+   * Append product recommendations to a response when available
+   */
+  async addProductRecommendations(sessionId, baseMessage, options = {}) {
+    if (!baseMessage) {
+      return baseMessage;
+    }
+
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      return baseMessage;
+    }
+
+    const { includeFollowUp = true, count = this.recommendationBatchSize } = options;
+
+    await this.refreshProductRecommendations(session);
+
+    const suggestions = this.getNextProductSuggestions(session, count);
+    if (!suggestions.length) {
+      this.sessions.set(sessionId, session);
+      return baseMessage;
+    }
+
+    const lines = suggestions.map(product => this.formatProductSummary(product)).filter(Boolean).join('\n');
+    const intro = suggestions.length === 1
+      ? 'Here is a plan that matches what you have shared so far:'
+      : 'Here are a couple of plans that match what you have shared so far:';
+    const followUp = includeFollowUp
+      ? '\n\nWould you like me to focus on any of these or narrow things down further?'
+      : '';
+
+    const enriched = `${baseMessage}\n\n${intro}\n${lines}${followUp}`;
+    this.sessions.set(sessionId, session);
+    return enriched;
   }
 
   /**

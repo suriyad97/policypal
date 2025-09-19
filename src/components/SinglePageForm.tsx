@@ -173,7 +173,6 @@ export const SinglePageForm: React.FC<SinglePageFormProps> = ({ onComplete }) =>
                     min="18"
                     max="80"
                     placeholder="Enter your age"
-                    className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-xl focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none transition-all bg-white"
                   />
                 </div>
                 {errors.age && <span className="text-red-500 text-sm mt-1 block">{errors.age.message}</span>}
@@ -216,7 +215,6 @@ export const SinglePageForm: React.FC<SinglePageFormProps> = ({ onComplete }) =>
                 {...register('medicalHistory')}
                 placeholder="Please mention any medical conditions, surgeries, or ongoing treatments"
                 rows={3}
-                className="w-full px-4 py-4 border border-gray-200 rounded-xl focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none transition-all bg-white resize-none"
               />
             </div>
           </motion.div>
