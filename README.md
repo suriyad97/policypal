@@ -13,16 +13,6 @@ A comprehensive insurance management system built with React, TypeScript, and Py
 - **Dual Backend Support**: Both Node.js and Python backend options
 
 
-## Python Backend Setup
-
-1. **Install Python dependencies:**
-   ```bash
-   cd python-server
-   pip install -r requirements.txt
-   ```
-
-
-
 ## Installation
 
 **Option 1: Node.js Backend**
@@ -31,13 +21,6 @@ npm install
 npm run dev:node
 ```
 
-**Option 2: Python Backend**
-```bash
-npm install
-cd python-server && pip install -r requirements.txt
-cd ..
-npm run dev:python
-```
 
 ## API Documentation
 
@@ -47,5 +30,5 @@ When using the Python backend, visit `http://localhost:5000/docs` for interactiv
 
 This app supports deployment on:
 - **Frontend**: Azure Static Web Apps, Vercel, Netlify
-- **Python Backend**: Azure App Service, AWS Lambda, Google Cloud Run
+
 
