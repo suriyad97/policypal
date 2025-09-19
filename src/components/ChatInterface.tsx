@@ -50,87 +50,19 @@ const LLM_CONFIG = {
 // Backend API base URL
 const API_BASE_URL = '/api';
 
-// Rule-based response fallback
-const generateRuleBasedResponse = (message: string, formData: FormData): string => {
-  const messageLower = message.toLowerCase();
-  const insuranceType = formData.insuranceType;
-  const name = formData.name;
+const GENDER_OPTIONS = [
+  { value: 'male', label: 'Male' },
+  { value: 'female', label: 'Female' },
+  { value: 'non_binary', label: 'Non-binary' },
+  { value: 'prefer_not_to_say', label: 'Prefer not to say' }
+];
 
-  // Price/Cost related queries
-  if (messageLower.includes('quote') || messageLower.includes('price') || messageLower.includes('cost') || messageLower.includes('premium') || messageLower.includes('rate') || messageLower.includes('how much')) {
-    if (insuranceType === 'auto') {
-      return `Great question about pricing, ${name}! Auto insurance rates typically range from ₹5,000 to ₹15,000 annually, depending on your vehicle type, age, and driving history. For a more accurate quote, I'd need to know: What type of vehicle do you drive and what's your driving experience?`;
-    } else if (insuranceType === 'health') {
-      return `${name}, health insurance premiums vary based on age and coverage needs. Individual plans typically start from ₹8,000 annually, while family plans range from ₹12,000-₹25,000. What's your age and are you looking for individual or family coverage?`;
-    } else if (insuranceType === 'term_life') {
-      return `${name}, term life insurance is very affordable! Premiums typically start from ₹6,000 annually for ₹10 lakh coverage. The exact rate depends on your age and health. What coverage amount are you considering for your family's protection?`;
-    } else {
-      return `${name}, ${insuranceType} insurance pricing varies based on several factors. I'd be happy to get you personalized quotes from multiple insurers. What specific coverage are you most interested in?`;
-    }
+const normalizeGenderValue = (value?: string) => {
+  if (!value) {
+    return '';
   }
-  
-  // Coverage/Benefits related queries
-  if (messageLower.includes('coverage') || messageLower.includes('cover') || messageLower.includes('benefit') || messageLower.includes('what does') || messageLower.includes('include')) {
-    if (insuranceType === 'auto') {
-      return `${name}, comprehensive auto insurance typically includes: liability coverage (mandatory), collision coverage, theft protection, natural disaster coverage, personal accident cover, and roadside assistance. Which of these aspects interests you most?`;
-    } else if (insuranceType === 'health') {
-      return `${name}, health insurance covers hospitalization expenses, pre/post hospitalization, day-care procedures, ambulance charges, and cashless treatment at network hospitals. Many plans also include wellness benefits. What specific health concerns do you want covered?`;
-    } else {
-      return `${name}, ${insuranceType} insurance provides comprehensive protection tailored to your needs. Would you like me to explain the specific coverage details and benefits available?`;
-    }
-  }
-  
-  // Claims related queries
-  if (messageLower.includes('claim') || messageLower.includes('accident') || messageLower.includes('damage') || messageLower.includes('file')) {
-    return `${name}, our claims process is designed to be simple and fast! You can file claims online, through our mobile app, or by calling our 24/7 helpline. Most ${insuranceType} claims are processed within 24-48 hours for cashless services. Have you had to file insurance claims before?`;
-  }
-  
-  // Comparison queries
-  if (messageLower.includes('compare') || messageLower.includes('difference') || messageLower.includes('better') || messageLower.includes('vs') || messageLower.includes('which')) {
-    return `${name}, that's a smart approach! I can help you compare different ${insuranceType} insurance options based on coverage, premium, claim settlement ratio, and customer service. Each insurer has unique strengths. Would you like me to show you a comparison of top insurers?`;
-  }
-  
-  // Timeline/When queries
-  if (messageLower.includes('when') || messageLower.includes('start') || messageLower.includes('begin') || messageLower.includes('how long')) {
-    return `${name}, most insurance policies can start as soon as tomorrow! Once you choose a plan and complete the application, ${insuranceType} insurance typically becomes effective within 24 hours for online purchases. Would you like to start the application process?`;
-  }
-  
-  // Requirements/Documents queries
-  if (messageLower.includes('need') || messageLower.includes('require') || messageLower.includes('document') || messageLower.includes('papers')) {
-    if (insuranceType === 'auto') {
-      return `${name}, for auto insurance you'll need: vehicle registration certificate, driving license, previous insurance policy (if any), and vehicle photos. I can guide you through the entire process. Do you have these documents ready?`;
-    } else if (insuranceType === 'health') {
-      return `${name}, for health insurance you'll typically need: age proof, address proof, income proof, and medical checkup reports (if required). Most documents can be uploaded digitally. What documents do you currently have?`;
-    } else {
-      return `${name}, for ${insuranceType} insurance, you'll need basic identity and address documents. I'll guide you through exactly what's needed. Would you like me to send you a detailed checklist?`;
-    }
-  }
-  
-  // Greeting responses
-  if (messageLower.includes('hello') || messageLower.includes('hi') || messageLower.includes('hey')) {
-    return `Hello ${name}! Great to chat with you! I'm here to help you find the perfect ${insuranceType} insurance. What questions can I answer for you today?`;
-  }
-  
-  // Thank you responses
-  if (messageLower.includes('thank') || messageLower.includes('thanks')) {
-    return `You're very welcome, ${name}! I'm happy to help you with your ${insuranceType} insurance needs. Is there anything else you'd like to know?`;
-  }
-  
-  // Help/Assistance queries
-  if (messageLower.includes('help') || messageLower.includes('assist') || messageLower.includes('support')) {
-    return `Absolutely, ${name}! I'm here to help you with everything related to ${insuranceType} insurance - from explaining coverage options to getting quotes and understanding the claims process. What would be most helpful for you right now?`;
-  } else {
-    // Dynamic default responses based on context
-    const responses = [
-      `That's an interesting question about ${insuranceType} insurance, ${name}. Could you tell me more about what specific information you're looking for?`,
-      `${name}, I'd be happy to help you with that! For ${insuranceType} insurance, I can assist with coverage options, pricing, claims, and more. What aspect interests you most?`,
-      `Great question, ${name}! Let me help you understand ${insuranceType} insurance better. Are you looking for information about coverage, costs, or something else specific?`,
-      `${name}, I'm here to make ${insuranceType} insurance simple for you. Whether it's about policies, premiums, or protection - what would you like to explore first?`
-    ];
-    
-    // Return a random response to avoid repetition
-    return responses[Math.floor(Math.random() * responses.length)];
-  }
+
+  return value.trim().toLowerCase().replace(/[-\s]+/g, '_');
 };
 
 // Database API functions
@@ -260,6 +192,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }
   const [chatSessionId, setChatSessionId] = useState<string | null>(null);
   const [insuranceProducts, setInsuranceProducts] = useState<InsuranceProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [userAge, setUserAge] = useState(formData.age ? String(formData.age) : '');
+  const [userGender, setUserGender] = useState(formData.gender || '');
+  const [demographicsConfirmed, setDemographicsConfirmed] = useState(Boolean(formData.age && formData.gender));
+  const [demographicError, setDemographicError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -333,75 +269,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }
         setIsTyping(false);
         return;
       } catch (chatInitError) {
-        console.warn('Chat API initialize failed, using local fallback:', chatInitError);
-      }
-
-      try {
-        let storedCustomerId: string | null = null;
-        let customer: any = null;
-        let products: InsuranceProduct[] = [];
-        let conversationHistoryId: number | null = null;
-
-        try {
-          const customerData = {
-            name: formData.name,
-            email: formData.email,
-            phone: formData.phone,
-            zipCode: formData.zipCode,
-            insuranceType: formData.insuranceType,
-            age: formData.age,
-            gender: formData.gender
-          };
-          const customerIdResult = await DatabaseAPI.storeCustomer(customerData);
-          if (customerIdResult) {
-            storedCustomerId = customerIdResult.toString();
-            setCustomerId(storedCustomerId);
-
-            customer = await DatabaseAPI.getCustomer(customerIdResult);
-
-            products = await DatabaseAPI.getInsuranceProducts(
-              formData.insuranceType,
-              customer?.age,
-              customer?.gender
-            );
-            setInsuranceProducts(products);
-
-            const sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
-            conversationHistoryId = await DatabaseAPI.createConversationHistory(
-              customerIdResult,
-              sessionId
-            );
-            setConversationId(conversationHistoryId);
-            setChatSessionId(sessionId);
-          }
-        } catch (databaseError) {
-          console.warn('Database initialization failed:', databaseError);
-        }
-
-        const fallbackMessage: Message = {
-          id: '0',
-          type: 'bot',
-          content: `Hi ${formData.name}!`,
-          timestamp: new Date(),
-        };
-
-        const fallbackWelcomeMessage: Message = {
-          id: '1',
-          type: 'bot',
-          content: `Hello ${formData.name}! 👋 I'm PolicyPal, your personal insurance advisor. I'm here to help you with your insurance needs.
-
-I can assist you with:
-• Getting quotes and comparing plans
-• Explaining different coverage options
-• Understanding insurance terms
-• Finding the best rates for your situation
-
-What questions do you have about insurance?`,
-          timestamp: new Date(),
-        };
-        setMessages([fallbackMessage, fallbackWelcomeMessage]);
-      } catch (error) {
-        console.error('Failed to initialize chat:', error);
+        console.error('Chat initialization failed:', chatInitError);
+        setError('Unable to connect to the chat service right now. Please try again in a moment.');
       } finally {
         setIsTyping(false);
       }
@@ -410,45 +279,112 @@ What questions do you have about insurance?`,
     initializeChat();
   }, [formData]);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputValue.trim()) return;
+  useEffect(() => {
+    setUserAge(formData.age ? String(formData.age) : '');
+    setUserGender(normalizeGenderValue(formData.gender));
+    setDemographicsConfirmed(Boolean(formData.age && formData.gender));
+  }, [formData.age, formData.gender]);
+
+  useEffect(() => {
+    if (!demographicsConfirmed) {
+      return;
+    }
+
+    const ageNumber = parseInt(userAge, 10);
+    const normalizedAge = Number.isNaN(ageNumber) ? undefined : ageNumber;
+    const normalizedGender = userGender ? userGender : undefined;
+
+    const fetchProducts = async () => {
+      try {
+        const productList = await DatabaseAPI.getInsuranceProducts(
+          formData.insuranceType,
+          normalizedAge,
+          normalizedGender
+        );
+        setInsuranceProducts(productList);
+      } catch (productError) {
+        console.warn('Failed to load insurance products:', productError);
+      }
+    };
+
+    fetchProducts();
+  }, [demographicsConfirmed, userAge, userGender, formData.insuranceType]);
+
+  const getGenderLabel = (value: string) => {
+    const normalized = value.toLowerCase();
+    const match = GENDER_OPTIONS.find(
+      option => option.value === normalized || option.label.toLowerCase() === normalized
+    );
+    return match ? match.label : value;
+  };
+
+  const buildDemographicPayload = (overrides?: Partial<{ age: number; gender: string }>) => {
+    const payload: { age?: number; gender?: string } = {};
+
+    if (demographicsConfirmed) {
+      const parsedAge = parseInt(userAge, 10);
+      if (!Number.isNaN(parsedAge)) {
+        payload.age = parsedAge;
+      }
+      if (userGender) {
+        payload.gender = userGender;
+      }
+    }
+
+    if (overrides) {
+      if (typeof overrides.age === 'number' && !Number.isNaN(overrides.age)) {
+        payload.age = overrides.age;
+      }
+      if (overrides.gender) {
+        payload.gender = overrides.gender;
+      }
+    }
+
+    return payload;
+  };
+
+  const sendMessage = async (messageText: string, overrides?: Partial<{ age: number; gender: string }>) => {
+    const trimmed = messageText.trim();
+    if (!trimmed) {
+      return false;
+    }
+
+    if (!chatSessionId) {
+      console.warn('Chat session is not ready yet.');
+      setError('Chat session is still establishing. Please try again in a moment.');
+      return false;
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
       type: 'user',
-      content: inputValue,
+      content: trimmed,
       timestamp: new Date(),
     };
 
     setMessages(prev => [...prev, userMessage]);
-    const currentInput = inputValue;
-    setInputValue('');
     setIsTyping(true);
 
-    try {
-      // Get customer data for context or use formData as fallback
-      let customer: any = null;
-      if (customerId) {
-        try {
-          customer = await DatabaseAPI.getCustomer(parseInt(customerId));
-        } catch (error) {
-          console.warn('Failed to get customer from database:', error);
-        }
-      }
+    const requestBody: Record<string, any> = {
+      sessionId: chatSessionId,
+      message: trimmed
+    };
 
-      // Send message to backend
+    const demographicPayload = buildDemographicPayload(overrides);
+    if (Object.keys(demographicPayload).length > 0) {
+      requestBody.formData = demographicPayload;
+    }
+
+    let wasSuccessful = false;
+
+    try {
       const response = await fetch(`${API_BASE_URL}/chat/message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: chatSessionId,
-          message: currentInput
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
-        // Fallback to rule-based response if backend fails
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -462,25 +398,91 @@ What questions do you have about insurance?`,
         timestamp: new Date(),
       };
 
-      setIsTyping(false);
       setMessages(prev => [...prev, botMessage]);
       setError(null);
+      wasSuccessful = true;
     } catch (error) {
       console.error('Error sending message to backend:', error);
+      setError('Sorry, there was an error connecting to the server. Please try again.');
+    } finally {
       setIsTyping(false);
-
-      // Use rule-based response as fallback
-      const fallbackContent = generateRuleBasedResponse(currentInput, formData);
-      const errorMessage: Message = {
-        id: (Date.now() + 2).toString(),
-        type: 'bot',
-        content: fallbackContent,
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, errorMessage]);
-      setError('Sorry, there was an error connecting to the server. Showing an automated response.');
     }
-  }
+
+    return wasSuccessful;
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = inputValue.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    setInputValue('');
+    await sendMessage(trimmed);
+  };
+
+  const handleDemographicsSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!chatSessionId) {
+      setDemographicError('Chat session is still establishing. Please wait a moment.');
+      return;
+    }
+
+    const trimmedAge = userAge.trim();
+    const parsedAge = parseInt(trimmedAge, 10);
+
+    if (!trimmedAge || Number.isNaN(parsedAge) || parsedAge < 18 || parsedAge > 100) {
+      setDemographicError('Please enter a valid age between 18 and 100.');
+      return;
+    }
+
+    if (!userGender) {
+      setDemographicError('Please select a gender option.');
+      return;
+    }
+
+    setDemographicError(null);
+    setUserAge(String(parsedAge));
+    const normalizedGender = normalizeGenderValue(userGender);
+    setUserGender(normalizedGender);
+
+    const genderLabel = getGenderLabel(normalizedGender);
+    const demographicMessage = genderLabel === 'Prefer not to say'
+      ? `I'm ${parsedAge} years old and I prefer not to share my gender.`
+      : `I'm ${parsedAge} years old and my gender is ${genderLabel}.`;
+
+    const wasSuccessful = await sendMessage(demographicMessage, { age: parsedAge, gender: normalizedGender });
+
+    if (!wasSuccessful) {
+      return;
+    }
+
+    setDemographicsConfirmed(true);
+
+    try {
+      const productList = await DatabaseAPI.getInsuranceProducts(
+        formData.insuranceType,
+        parsedAge,
+        normalizedGender
+      );
+      setInsuranceProducts(productList);
+    } catch (productError) {
+      console.warn('Failed to refresh insurance products:', productError);
+    }
+  };
+
+  const handleEditDemographics = () => {
+    setDemographicsConfirmed(false);
+    setDemographicError(null);
+  };
+
+  const resolvedAge = demographicsConfirmed && userAge ? userAge : formData.age ? String(formData.age) : '';
+  const resolvedGenderValue = demographicsConfirmed && userGender ? userGender : formData.gender ? formData.gender : '';
+  const resolvedGenderLabel = resolvedGenderValue ? getGenderLabel(resolvedGenderValue) : '';
+  const ageDisplay = resolvedAge ? `Age: ${resolvedAge}` : 'Age not provided yet';
+  const genderDisplay = resolvedGenderLabel ? `Gender: ${resolvedGenderLabel}` : 'Gender not provided yet';
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
@@ -530,9 +532,24 @@ What questions do you have about insurance?`,
                   <MapPin className="w-4 h-4 text-gray-500" />
                   <span className="text-gray-700">{formData.zipCode}</span>
                 </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <Calendar className="w-4 h-4 text-gray-500" />
+                    <span className="text-gray-700">{ageDisplay}</span>
+                  </div>
+                  {demographicsConfirmed && (
+                    <button
+                      type="button"
+                      onClick={handleEditDemographics}
+                      className="text-xs text-blue-600 hover:text-blue-800 font-semibold"
+                    >
+                      Edit
+                    </button>
+                  )}
+                </div>
                 <div className="flex items-center space-x-3">
-                  <Calendar className="w-4 h-4 text-gray-500" />
-                  <span className="text-gray-700">Age: {28}</span>
+                  <Users className="w-4 h-4 text-gray-500" />
+                  <span className="text-gray-700">{genderDisplay}</span>
                 </div>
                 <div className="flex items-center space-x-3">
                   <Shield className="w-4 h-4 text-gray-500" />
@@ -576,6 +593,74 @@ What questions do you have about insurance?`,
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
             <div className="space-y-4">
+              {!demographicsConfirmed && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white border border-blue-200 rounded-2xl p-5 shadow-sm"
+                >
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">Let's personalise your quotes</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Share your age and gender so I can tailor recommendations to fit you best.
+                  </p>
+                  <form className="space-y-4" onSubmit={handleDemographicsSubmit}>
+                    <div>
+                      <label htmlFor="chat-age" className="block text-sm font-medium text-gray-700 mb-1">
+                        Age
+                      </label>
+                      <input
+                        id="chat-age"
+                        type="number"
+                        min={18}
+                        max={100}
+                        value={userAge}
+                        onChange={(event) => setUserAge(event.target.value)}
+                        placeholder="Enter your age"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <span className="block text-sm font-medium text-gray-700 mb-1">Gender</span>
+                      <div className="flex flex-wrap gap-2">
+                        {GENDER_OPTIONS.map(option => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => setUserGender(option.value)}
+                            className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                              userGender === option.value
+                                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                : 'border-gray-300 text-gray-700 hover:border-blue-400'
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {demographicError && (
+                      <p className="text-sm text-red-600">{demographicError}</p>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-gray-500">This helps me trim down the most relevant plans.</p>
+                      <motion.button
+                        type="submit"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        disabled={!userAge.trim() || !userGender || isTyping}
+                        className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+                          !userAge.trim() || !userGender || isTyping
+                            ? 'bg-blue-300 text-white cursor-not-allowed'
+                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                        }`}
+                      >
+                        Share Details
+                      </motion.button>
+                    </div>
+                  </form>
+                </motion.div>
+              )}
+
               <AnimatePresence>
                 {messages.map((message) => (
                   <motion.div
