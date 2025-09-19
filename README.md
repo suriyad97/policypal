@@ -1,6 +1,6 @@
 # PolicyPal - Insurance Management System
 
-A comprehensive insurance management system built with React, TypeScript, and Python FastAPI.
+A comprehensive insurance management system built with React, TypeScript.
 
 ## Features
 
