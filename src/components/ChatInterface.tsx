@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, User, Sparkles, Shield, Phone, Mail, MapPin, Calendar, CheckCircle, Users } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Shield, Phone, Mail, MapPin, Calendar, CheckCircle, Users, Star, Award, TrendingUp } from 'lucide-react';
 import { SimpleFormData } from './HeroSection';
 
 interface Message {
@@ -63,6 +63,75 @@ const normalizeGenderValue = (value?: string) => {
   }
 
   return value.trim().toLowerCase().replace(/[-\s]+/g, '_');
+};
+
+// Component to format message content with bold text and better formatting
+const FormattedMessage: React.FC<{ content: string }> = ({ content }) => {
+  // Split content by markdown-style formatting
+  const formatText = (text: string) => {
+    // Handle **bold** text
+    const boldRegex = /\*\*(.*?)\*\*/g;
+    const parts = text.split(boldRegex);
+    
+    return parts.map((part, index) => {
+      // Every odd index is the content inside **bold**
+      if (index % 2 === 1) {
+        return <strong key={index} className="font-bold text-gray-900">{part}</strong>;
+      }
+      return part;
+    });
+  };
+
+  // Split by line breaks and format each line
+  const lines = content.split('\n');
+  
+  return (
+    <div className="space-y-2">
+      {lines.map((line, lineIndex) => {
+        // Handle bullet points
+        if (line.trim().startsWith('•') || line.trim().startsWith('-')) {
+          return (
+            <div key={lineIndex} className="flex items-start space-x-2">
+              <span className="text-blue-600 mt-1">•</span>
+              <span className="flex-1">{formatText(line.replace(/^[•\-]\s*/, ''))}</span>
+            </div>
+          );
+        }
+        
+        // Handle numbered lists
+        const numberedMatch = line.match(/^(\d+)\.\s*(.*)/);
+        if (numberedMatch) {
+          return (
+            <div key={lineIndex} className="flex items-start space-x-2">
+              <span className="text-blue-600 font-semibold min-w-[20px]">{numberedMatch[1]}.</span>
+              <span className="flex-1">{formatText(numberedMatch[2])}</span>
+            </div>
+          );
+        }
+        
+        // Handle headings (lines that end with :)
+        if (line.trim().endsWith(':') && line.trim().length > 1) {
+          return (
+            <div key={lineIndex} className="font-semibold text-gray-900 mt-3 mb-1">
+              {formatText(line)}
+            </div>
+          );
+        }
+        
+        // Regular lines
+        if (line.trim()) {
+          return (
+            <div key={lineIndex}>
+              {formatText(line)}
+            </div>
+          );
+        }
+        
+        // Empty lines for spacing
+        return <div key={lineIndex} className="h-2" />;
+      })}
+    </div>
+  );
 };
 
 // Database API functions
@@ -690,7 +759,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }
                           : 'bg-white text-gray-800 border border-gray-200'
                       }`}>
                         <div className="text-sm leading-relaxed whitespace-pre-wrap">
-                          {message.content}
+                          <FormattedMessage content={message.content} />
                         </div>
                         
                         {message.isQuote && message.quoteData && (
