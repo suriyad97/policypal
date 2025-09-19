@@ -9,8 +9,7 @@ A comprehensive insurance management system built with React, TypeScript, and Py
 
 - **Dynamic Forms**: Context-aware forms based on insurance type
 - **Real-time Chat**: Conversation history and customer data management
-- **Python Backend**: FastAPI server with async database operations
-- **Dual Backend Support**: Both Node.js and Python backend options
+
 
 
 ## Installation
