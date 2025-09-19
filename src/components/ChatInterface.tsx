@@ -668,6 +668,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ type: "spring", stiffness: 500 }}
+                    className={`flex justify-${message.type === 'user' ? 'end' : 'start'}`}
                   >
                     <div className={`flex items-start space-x-3 max-w-lg ${
                       message.type === 'user' ? 'flex-row-reverse space-x-reverse' : ''
@@ -787,7 +788,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Type your message..."
+                placeholder={`Ask me anything about ${formData.insuranceType} insurance...`}
                 className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               <motion.button
