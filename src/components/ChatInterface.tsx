@@ -263,6 +263,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }
   const [userGender, setUserGender] = useState(formData.gender || '');
   const [demographicsConfirmed, setDemographicsConfirmed] = useState(Boolean(formData.age && formData.gender));
   const [demographicError, setDemographicError] = useState<string | null>(null);
+  const [showInitialAcknowledgment, setShowInitialAcknowledgment] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -271,43 +272,27 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }
 
   useEffect(() => {
     const initializeChat = async () => {
-      setIsTyping(true);
+      // Show initial acknowledgment message immediately
+      const acknowledgmentMessage: Message = {
+        id: 'acknowledgment',
+        type: 'bot',
+        content: `Thank you, **${formData.name}**! 🎉\n\nI've received your information:\n• **Name:** ${formData.name}\n• **Email:** ${formData.email}\n• **Phone:** ${formData.phone}\n• **Location:** ${formData.pincode}\n• **Insurance Type:** ${formData.insuranceType.charAt(0).toUpperCase() + formData.insuranceType.slice(1)} Insurance\n\nI'm **PolicyPal**, your personal insurance advisor, and I'm excited to help you find the perfect coverage! Let me get a bit more information to provide you with the most accurate quotes.`,
+        timestamp: new Date()
+      };
+
+      setMessages([acknowledgmentMessage]);
+      setShowInitialAcknowledgment(true);
 
       const generatedSessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+      setChatSessionId(generatedSessionId);
 
       try {
-        const response = await fetch(`${API_BASE_URL}/chat/initialize`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId: generatedSessionId, formData })
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        // Store customer data in background
+        const storedCustomerId = await DatabaseAPI.storeCustomer(formData);
+        if (storedCustomerId) {
+          setCustomerId(storedCustomerId.toString());
         }
-
-        const result = await response.json();
-
-        if (!result.success || !result.message) {
-          throw new Error(result.error || 'Chat initialization failed');
-        }
-
-        const backendSessionId = result.sessionId || generatedSessionId;
-        setChatSessionId(backendSessionId);
-
-        if (result.customerId) {
-          setCustomerId(result.customerId.toString());
-        }
-
-        const initialMessage: Message = {
-          id: Date.now().toString(),
-          type: 'bot',
-          content: result.message,
-          timestamp: new Date()
-        };
-
-        setMessages([initialMessage]);
-
+        
         try {
           const productList = await DatabaseAPI.getInsuranceProducts(
             formData.insuranceType,
@@ -319,11 +304,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }
           console.warn('Failed to load insurance products:', productError);
         }
 
-        if (result.customerId) {
+        if (storedCustomerId) {
           try {
             const createdConversationId = await DatabaseAPI.createConversationHistory(
-              result.customerId,
-              backendSessionId
+              storedCustomerId,
+              generatedSessionId
             );
             if (createdConversationId) {
               setConversationId(createdConversationId);
@@ -333,13 +318,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }
           }
         }
 
-        setIsTyping(false);
-        return;
       } catch (chatInitError) {
         console.error('Chat initialization failed:', chatInitError);
-        setError('Unable to connect to the chat service right now. Please try again in a moment.');
-      } finally {
-        setIsTyping(false);
+        console.warn('Background initialization failed, continuing with chat');
       }
     };
 
@@ -492,6 +473,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }
   const handleDemographicsSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
+    setShowInitialAcknowledgment(false);
+
     if (!chatSessionId) {
       setDemographicError('Chat session is still establishing. Please wait a moment.');
       return;
@@ -520,13 +503,59 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }
       ? `I'm ${parsedAge} years old and I prefer not to share my gender.`
       : `I'm ${parsedAge} years old and my gender is ${genderLabel}.`;
 
-    const wasSuccessful = await sendMessage(demographicMessage, { age: parsedAge, gender: normalizedGender });
+    // Add user message to chat
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      type: 'user',
+      content: demographicMessage,
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, userMessage]);
 
-    if (!wasSuccessful) {
-      return;
+    // Now initialize the actual chat conversation with LLM
+    setIsTyping(true);
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/chat/initialize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          sessionId: chatSessionId, 
+          formData: { 
+            ...formData, 
+            age: parsedAge, 
+            gender: normalizedGender 
+          } 
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      if (!result.success || !result.message) {
+        throw new Error(result.error || 'Chat initialization failed');
+      }
+
+      const botMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'bot',
+        content: result.message,
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, botMessage]);
+      setError(null);
+      setDemographicsConfirmed(true);
+
+    } catch (error) {
+      console.error('Error initializing chat conversation:', error);
+      setError('Sorry, there was an error starting the conversation. Please try again.');
+    } finally {
+      setIsTyping(false);
     }
-
-    setDemographicsConfirmed(true);
 
     try {
       const productList = await DatabaseAPI.getInsuranceProducts(
@@ -660,15 +689,15 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
             <div className="space-y-4">
-              {!demographicsConfirmed && (
+              {showInitialAcknowledgment && !demographicsConfirmed && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="bg-white border border-blue-200 rounded-2xl p-5 shadow-sm"
                 >
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">Let's personalise your quotes</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">Let's personalize your quotes</h3>
                   <p className="text-sm text-gray-600 mb-4">
-                    Help me understand your needs better so I can find the perfect {formData.insuranceType} insurance for you.
+                    Just need your age and gender to provide the most accurate rates and recommendations.
                   </p>
                   <form className="space-y-4" onSubmit={handleDemographicsSubmit}>
                     <div>
@@ -709,7 +738,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }
                       <p className="text-sm text-red-600">{demographicError}</p>
                     )}
                     <div className="flex items-center justify-between">
-                      <p className="text-xs text-gray-500">This helps me find the best rates and coverage for you.</p>
+                      <p className="text-xs text-gray-500">This helps me find the most accurate rates for you.</p>
                       <motion.button
                         type="submit"
                         whileHover={{ scale: 1.02 }}
@@ -721,7 +750,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }
                             : 'bg-blue-600 text-white hover:bg-blue-700'
                         }`}
                       >
-                        Let's Continue
+                        Start Conversation
                       </motion.button>
                     </div>
                   </form>
