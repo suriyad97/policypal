@@ -601,12 +601,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }
                 >
                   <h3 className="text-lg font-semibold text-gray-900 mb-1">Let's personalise your quotes</h3>
                   <p className="text-sm text-gray-600 mb-4">
-                    Share your age and gender so I can tailor recommendations to fit you best.
+                    Help me understand your needs better so I can find the perfect {formData.insuranceType} insurance for you.
                   </p>
                   <form className="space-y-4" onSubmit={handleDemographicsSubmit}>
                     <div>
                       <label htmlFor="chat-age" className="block text-sm font-medium text-gray-700 mb-1">
-                        Age
+                        Your Age
                       </label>
                       <input
                         id="chat-age"
@@ -615,12 +615,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }
                         max={100}
                         value={userAge}
                         onChange={(event) => setUserAge(event.target.value)}
-                        placeholder="Enter your age"
+                        placeholder="e.g., 32"
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                     </div>
                     <div>
-                      <span className="block text-sm font-medium text-gray-700 mb-1">Gender</span>
+                      <span className="block text-sm font-medium text-gray-700 mb-1">Gender (for personalized rates)</span>
                       <div className="flex flex-wrap gap-2">
                         {GENDER_OPTIONS.map(option => (
                           <button
@@ -642,7 +642,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }
                       <p className="text-sm text-red-600">{demographicError}</p>
                     )}
                     <div className="flex items-center justify-between">
-                      <p className="text-xs text-gray-500">This helps me trim down the most relevant plans.</p>
+                      <p className="text-xs text-gray-500">This helps me find the best rates and coverage for you.</p>
                       <motion.button
                         type="submit"
                         whileHover={{ scale: 1.02 }}
@@ -654,7 +654,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ formData, onBack }
                             : 'bg-blue-600 text-white hover:bg-blue-700'
                         }`}
                       >
-                        Share Details
+                        Let's Continue
                       </motion.button>
                     </div>
                   </form>
